@@ -1,3 +1,4 @@
+from hepunits import g
 import numpy as np
 import os
 import csv
@@ -17,8 +18,121 @@ phi_paths = {
 
 # Constants
 ETA = 0.214
+g_L = -0.2766
+g_R = 0.2234
+
 l_values = [1, 2]
 m_values = {1: [-1, 0, 1], 2: [-2, -1, 0, 1, 2]}
+
+a_matrix = ( 1 / (g_L**2 - g_R**2) ) * np.array([[g_R**2, 0, 0, 0, 0, g_L**2, 0, 0], 
+                                                 [0, g_R**2, 0, 0, 0, 0, g_L**2, 0], 
+                                                 [0, 0, g_R**2 - 0.5 * g_L**2, 0, 0, 0, 0, (np.sqrt(3)/2) * g_L**2], 
+                                                 [0, 0, 0, g_R**2 - g_L**2, 0, 0, 0, 0], 
+                                                 [0, 0, 0, 0, g_R**2 - g_L**2, 0, 0, 0], 
+                                                 [g_L**2, 0, 0, 0, 0, g_R**2, 0, 0], 
+                                                 [0, g_L**2, 0, 0, 0, 0, g_R**2, 0], 
+                                                 [0, 0, (np.sqrt(3)/2) * g_L**2, 0, 0, 0, 0, 0.5 * g_L**2 - g_R**2] ])
+
+# Helper function to determine if it's plus or minus based on dataset value
+def plus_minus(dataset):
+    if dataset == 1:
+        return +1
+    elif dataset == 3:
+        return -1
+
+# Projector 1
+def projector_1(theta, phi, dataset):
+    value = np.sqrt(2) * np.sin(theta) * (5 * np.cos(theta) + plus_minus(dataset) * 1) * np.cos(phi)
+    return value
+
+# Projector 2
+def projector_2(theta, phi, dataset):
+    value = np.sqrt(2) * np.sin(theta) * (5 * np.cos(theta) + plus_minus(dataset) * 1) * np.sin(phi)
+    return value
+
+# Projector 3
+def projector_3(theta, phi, dataset):
+    value = (1/4) * (5 + plus_minus(dataset) * 4 * np.cos(theta) + 15 * np.cos(2*theta))
+    return value
+
+# Projector 4
+def projector_4(theta, phi, dataset):
+    return 5 * np.sin(theta)**2 * np.cos(2 * phi)
+
+# Projector 5
+def projector_5(theta, phi, dataset):
+    return 5 * np.sin(theta)**2 * np.sin(2 * phi)
+
+# Projector 6
+def projector_6(theta, phi, dataset):
+    value = np.sqrt(2) * np.sin(theta) * (-5 * np.cos(theta) + plus_minus(dataset) * 1) * np.cos(phi)
+    return value
+
+# Projector 7
+def projector_7(theta, phi, dataset):
+    value = np.sqrt(2) * np.sin(theta) * (-5 * np.cos(theta) + plus_minus(dataset) * 1) * np.sin(phi)
+    return value
+
+# Projector 8
+def projector_8(theta, phi, dataset):
+    value = (1 / (4 * np.sqrt(3))) * (-5 + plus_minus(dataset) * 12 * np.cos(theta) + 15 * np.cos(2*theta))
+    return value
+
+# Define the vector of projectors
+def projector_vector(theta, phi, dataset):
+    # Call each projector function and store their results in a list or array
+    vector = np.array([
+        projector_1(theta, phi, dataset),
+        projector_2(theta, phi, dataset),
+        projector_3(theta, phi, dataset),
+        projector_4(theta, phi, dataset),
+        projector_5(theta, phi, dataset),
+        projector_6(theta, phi, dataset),
+        projector_7(theta, phi, dataset),
+        projector_8(theta, phi, dataset)
+    ])
+    return vector
+
+# Example usage of matrix-vector multiplication
+def multiply_projector_by_matrix(matrix, theta, phi, dataset):
+    # Get the projector vector
+    vector = projector_vector(theta, phi, dataset)
+    
+    # Multiply the matrix by the vector
+    result = np.dot(matrix, vector)
+    
+    return result
+
+def calculate_coefficients_fgh(theta_paths, phi_paths, mask=None):
+    """
+    Calculate the f, g, and h coefficients and return them as dictionaries.
+    """
+    theta_values = {1: np.arccos(read_data(theta_paths[1])), 3: np.arccos(read_data(theta_paths[3]))}
+    phi_values = {1: read_data(phi_paths[1]), 3: read_data(phi_paths[3])}
+    
+    # Apply mask if provided
+    if mask is not None:
+        theta_values = {key: theta[mask] for key, theta in theta_values.items()}
+        phi_values = {key: phi[mask] for key, phi in phi_values.items()}
+
+    f_coefficients = np.zeros(8)
+    g_coefficients = np.zeros(8)
+    h_coefficients = np.zeros((8, 8))
+
+    
+    p_1 = a_matrix @ projector_vector(theta_values[1], phi_values[1], 1)
+    p_3 = a_matrix @ projector_vector(theta_values[3], phi_values[3], 1)
+    for i in range(8):
+        f_coefficients[i] = 0.5 * np.mean(p_1[i])
+        g_coefficients[i] = 0.5 * np.mean(p_3[i])
+
+    h_matrix = np.outer(p_1, p_3)
+
+    for (i,j) in [(i,j) for i in range(8) for j in range(8)]:
+        h_coefficients[i,j] = 0.25 * np.mean(h_matrix[i,j])
+
+    return f_coefficients, g_coefficients, h_coefficients
+
 
 def calculate_coefficients_AC(theta_paths, phi_paths, mask=None):
     """

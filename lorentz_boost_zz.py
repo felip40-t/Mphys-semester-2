@@ -1,6 +1,6 @@
-
 import os
 import numpy as np
+from concurrent.futures import ThreadPoolExecutor
 from lhe_reading_WW import find_latest_run_dir
 from histo_plotter import read_data
 
@@ -45,10 +45,10 @@ def execute_boost(vec_array, boost_array):
 def calc_inv_mass(four_vec):
     return np.sqrt(four_vec[0]**2 - np.sum(four_vec[1:]**2))
 
-def azimuthal_angle(lep_vec, parent_axis, e_z):
+def azimuthal_angle(lep_vec, parent_axis):
     # Normalise
     parent_axis = parent_axis / np.linalg.norm(parent_axis) # Boson flight path in the diboson CM frame
-    e_z = e_z / np.linalg.norm(e_z) # Boson flight path in the lab frame, or 'new' z axis
+    e_z = np.array([0,0,1]) # Z-axis or beam axis
     # Calculate the normal to the production plane
     n_p = np.cross(parent_axis, e_z)
     n_p = n_p / np.linalg.norm(n_p)
@@ -67,10 +67,9 @@ def calc_scattering_angle(parent_axis):
     cos_psi = parent_axis @ beam_axis
     return cos_psi
 
-def calc_polar_angle(lep_array, parent_array, name, run_num, e_z):
+def calc_polar_angle(lep_array, parent_array, name, run_num):
     lep_vec = lep_array[:, 1:]  # Take spatial components of leptons
     parent_vec = parent_array[:, 1:]  # Take spatial components of parent (W or Z)
-    e_z_vec = e_z[:, 1:]  # Take spatial components
 
     # Compute norms for normalization
     lep_norm = np.linalg.norm(lep_vec, axis=1)
@@ -94,7 +93,7 @@ def calc_polar_angle(lep_array, parent_array, name, run_num, e_z):
     np.savetxt(file_path_psi, cos_psi)
 
     # Calculate azimuthal angles for each event
-    phi = np.array([azimuthal_angle(lep_vec[i], parent_vec[i], e_z_vec[i]) for i in range(len(lep_vec))])
+    phi = np.array([azimuthal_angle(lep_vec[i], parent_vec[i]) for i in range(len(lep_vec))])
     # Save phi data to a file
     file_path_phi = os.path.join(particle_directories[name], f"phi_data_{run_num}.txt")
     np.savetxt(file_path_phi, phi)
@@ -110,19 +109,18 @@ def main():
 
     # Reconstruct the total diboson system (z1 + z2)
     diboson_array = particle_arrays['z1'] + particle_arrays['z2']
-    beam_axis = np.array([0, 0, 1])
-    beam_boosted = execute_boost(beam_axis[np.newaxis, :], particle_arrays['z1'])
+
     # Boost calculations for e+ 
     z1_boosted = execute_boost(particle_arrays['z1'], diboson_array)
     e_plus_intermed = execute_boost(particle_arrays['e+'], diboson_array)
     e_plus_boosted = execute_boost(e_plus_intermed, z1_boosted)
-    calc_polar_angle(e_plus_boosted, z1_boosted, 'e+', run_number, beam_boosted)
+    calc_polar_angle(e_plus_boosted, z1_boosted, 'e+', run_number)
 
     # Boost calculations for mu+
     z2_boosted = execute_boost(particle_arrays['z2'], diboson_array)
     mu_plus_intermed = execute_boost(particle_arrays['mu+'], diboson_array)
     mu_plus_boosted = execute_boost(mu_plus_intermed, z2_boosted)
-    calc_polar_angle(mu_plus_boosted, z2_boosted, 'mu+', run_number, beam_boosted)
+    calc_polar_angle(mu_plus_boosted, z2_boosted, 'mu+', run_number)
 
     ZZ_inv_mass = np.apply_along_axis(calc_inv_mass, 1, diboson_array)
     file_path_inv_mass = os.path.join(process_dir, f"Plots and data/ZZ_inv_mass_{run_number}.txt")

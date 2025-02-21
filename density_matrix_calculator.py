@@ -22,8 +22,16 @@ I_3 = np.identity(3)
 S_x = sqrt1_2 *  np.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]])
 S_y = sqrt1_2 *  np.array([[0, -1j, 0], [1j, 0, -1j], [0, 1j, 0]])
 
+lambda_1 = np.array([[0,1,0],[1,0,0],[0,0,0]])
+lambda_2 = np.array([[0,-1j,0],[1j,0,0],[0,0,0]])
+lambda_3 = np.array([[1,0,0],[0,-1,0],[0,0,0]])
 lambda_4 = np.array([[0,0,1],[0,0,0],[1,0,0]])
 lambda_5 = np.array([[0,0,-1j],[0,0,0],[1j,0,0]])
+lambda_6 = np.array([[0,0,0], [0,0,1], [0,1,0]])
+lambda_7 = np.array([[0,0,0], [0,0,-1j], [0,1j,0]])
+lambda_8 = 1/np.sqrt(3) * np.array([[1,0,0],[0,1,0],[0,0,-2]])
+
+lambda_operators = {0: lambda_1, 1: lambda_2, 2: lambda_3, 3: lambda_4, 4: lambda_5, 5: lambda_6, 6: lambda_7, 7: lambda_8}
 
 O_bell_prime1 = -2/sqrt3 * (np.kron(S_x, S_x) + np.kron(S_y, S_y)) + np.kron(lambda_4, lambda_4) + np.kron(lambda_5, lambda_5)
  
@@ -36,7 +44,7 @@ O_bell_prime1 = -2/sqrt3 * (np.kron(S_x, S_x) + np.kron(S_y, S_y)) + np.kron(lam
 # print(O_bell_prime2)
 
 
-def calculate_density_matrix(A_coefficients, C_coefficients):
+def calculate_density_matrix_AC(A_coefficients, C_coefficients):
     """
     Construct the density matrix using the A and C coefficients.
     """
@@ -57,3 +65,10 @@ def calculate_density_matrix(A_coefficients, C_coefficients):
 
     density_matrix *= 1/9
     return density_matrix
+
+def calculate_density_matrix_fgh(f_coefficients, g_coefficients, h_coefficients):
+    """
+    Construct the density matrix using the f, g, and h coefficients.
+    """
+    density_matrix = np.kron(I_3, I_3).astype(complex)
+    
