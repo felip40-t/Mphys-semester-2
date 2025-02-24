@@ -70,5 +70,11 @@ def calculate_density_matrix_fgh(f_coefficients, g_coefficients, h_coefficients)
     """
     Construct the density matrix using the f, g, and h coefficients.
     """
-    density_matrix = np.kron(I_3, I_3).astype(complex)
-    
+    density_matrix = (1/9) * np.kron(I_3, I_3).astype(complex)
+    for i in range(8):
+        density_matrix += f_coefficients[i] * np.kron(lambda_operators[i], I_3)
+        density_matrix += g_coefficients[i] * np.kron(I_3, lambda_operators[i])
+    for (i, j) in [(i, j) for i in range(8) for j in range(8)]:
+        density_matrix += h_coefficients[i, j] * np.kron(lambda_operators[i], lambda_operators[j])
+
+    return density_matrix

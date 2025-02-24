@@ -62,6 +62,35 @@ def azimuthal_angle(lep_vec, parent_axis):
     sign = np.sign(e_z @ np.cross(n_p, n_d))
     return sign * phi
 
+def rotation_matrix(axis, theta):
+    axis = axis / np.linalg.norm(axis)
+    rotation = np.array([[np.cos(theta) + axis[0]**2 * (1 - np.cos(theta)),
+                          axis[0] * axis[1] * (1 - np.cos(theta)) - axis[2] * np.sin(theta),
+                          axis[0] * axis[2] * (1 - np.cos(theta)) + axis[1] * np.sin(theta)],
+                         [axis[1] * axis[0] * (1 - np.cos(theta)) + axis[2] * np.sin(theta),
+                          np.cos(theta) + axis[1]**2 * (1 - np.cos(theta)),
+                          axis[1] * axis[2] * (1 - np.cos(theta)) - axis[0] * np.sin(theta)],
+                         [axis[2] * axis[0] * (1 - np.cos(theta)) - axis[1] * np.sin(theta),
+                          axis[2] * axis[1] * (1 - np.cos(theta)) + axis[0] * np.sin(theta),
+                          np.cos(theta) + axis[2]**2 * (1 - np.cos(theta))]])
+    return rotation
+
+def azimuthal_angle2(lep_vec, parent_axis):
+    # Normalise
+    parent_axis = parent_axis / np.linalg.norm(parent_axis) # Boson flight path in the diboson CM frame
+    e_z = np.array([0,0,1]) # Z-axis
+    # Find rotation axis
+    rot_axis = np.cross(e_z, parent_axis)
+    rot_axis = rot_axis / np.linalg.norm(rot_axis)
+    # Find rotation angle
+    cos_theta = e_z @ parent_axis
+    theta = np.arccos(cos_theta)
+    # Rotate lepton vector
+    lep_vec_rot = rotation_matrix(rot_axis, theta) @ lep_vec
+    # Calculate azimuthal angle
+    phi = np.arctan2(lep_vec_rot[1], lep_vec_rot[0])
+    return phi
+
 def calc_scattering_angle(parent_axis):
     beam_axis = np.array([0,0,1])
     cos_psi = parent_axis @ beam_axis
@@ -93,7 +122,7 @@ def calc_polar_angle(lep_array, parent_array, name, run_num):
     np.savetxt(file_path_psi, cos_psi)
 
     # Calculate azimuthal angles for each event
-    phi = np.array([azimuthal_angle(lep_vec[i], parent_vec[i]) for i in range(len(lep_vec))])
+    phi = np.array([azimuthal_angle2(lep_vec[i], parent_vec[i]) for i in range(len(lep_vec))])
     # Save phi data to a file
     file_path_phi = os.path.join(particle_directories[name], f"phi_data_{run_num}.txt")
     np.savetxt(file_path_phi, phi)

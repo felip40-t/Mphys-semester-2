@@ -93,43 +93,33 @@ def projector_vector(theta, phi, dataset):
     ])
     return vector
 
-# Example usage of matrix-vector multiplication
-def multiply_projector_by_matrix(matrix, theta, phi, dataset):
-    # Get the projector vector
-    vector = projector_vector(theta, phi, dataset)
-    
-    # Multiply the matrix by the vector
-    result = np.dot(matrix, vector)
-    
-    return result
 
 def calculate_coefficients_fgh(theta_paths, phi_paths, mask=None):
     """
     Calculate the f, g, and h coefficients and return them as dictionaries.
     """
+    # Read data and apply mask if provided
     theta_values = {1: np.arccos(read_data(theta_paths[1])), 3: np.arccos(read_data(theta_paths[3]))}
     phi_values = {1: read_data(phi_paths[1]), 3: read_data(phi_paths[3])}
-    
-    # Apply mask if provided
     if mask is not None:
         theta_values = {key: theta[mask] for key, theta in theta_values.items()}
         phi_values = {key: phi[mask] for key, phi in phi_values.items()}
 
+    # Initialize coefficients
     f_coefficients = np.zeros(8)
     g_coefficients = np.zeros(8)
     h_coefficients = np.zeros((8, 8))
 
-    
+    # Calculate projector vectors
     p_1 = a_matrix @ projector_vector(theta_values[1], phi_values[1], 1)
     p_3 = a_matrix @ projector_vector(theta_values[3], phi_values[3], 1)
-    for i in range(8):
-        f_coefficients[i] = 0.5 * np.mean(p_1[i])
-        g_coefficients[i] = 0.5 * np.mean(p_3[i])
 
-    h_matrix = np.outer(p_1, p_3)
+    # Calculate f and g coefficients using vectorized operations
+    f_coefficients = 0.5 * np.mean(p_1, axis=1)
+    g_coefficients = 0.5 * np.mean(p_3, axis=1)
 
-    for (i,j) in [(i,j) for i in range(8) for j in range(8)]:
-        h_coefficients[i,j] = 0.25 * np.mean(h_matrix[i,j])
+    # Calculate h coefficients using vectorized operations
+    h_coefficients = 0.25 * np.mean(p_1[:, np.newaxis, :] * p_3[np.newaxis, :, :], axis=2)
 
     return f_coefficients, g_coefficients, h_coefficients
 
@@ -179,7 +169,7 @@ def calculate_coefficients_AC(theta_paths, phi_paths, mask=None):
                 else:
                     C_coefficients[(l1, m1, l3, m3)] = - 8 * np.pi * np.sqrt(5) * gamma / ETA
 
-    return A_coefficients, C_coefficients
+    return A_coefficients, C_coefficients, alpha_values, gamma_values
 
 def save_coefficients(A_coefficients, C_coefficients, alpha_values, gamma_values, ZZ_path):
     """
@@ -222,7 +212,9 @@ def read_masked_data(cos_psi_data, ZZ_inv_mass, psi_range, mass_range):
     """
     return (cos_psi_data > psi_range[0]) & (cos_psi_data < psi_range[1]) & (ZZ_inv_mass > mass_range[0]) & (ZZ_inv_mass < mass_range[1])
 
-# def main():
-#     A_coefficients, C_coefficients, alpha_values, gamma_values = calculate_coefficients(cos_theta_paths, phi_paths)
-#     save_coefficients(A_coefficients, C_coefficients, alpha_values, gamma_values, ZZ_path)
+def main():
+    A_coefficients, C_coefficients, alpha_values, gamma_values = calculate_coefficients_AC(cos_theta_paths, phi_paths)
+    save_coefficients(A_coefficients, C_coefficients, alpha_values, gamma_values, ZZ_path)
+
+main()
 

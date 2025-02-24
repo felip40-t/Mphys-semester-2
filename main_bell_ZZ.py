@@ -1,8 +1,8 @@
 import numpy as np
 import os
 from histo_plotter import read_data
-from coefficient_calculator_ZZ import calculate_coefficients, read_masked_data
-from density_matrix_calculator import calculate_density_matrix, O_bell_prime1
+from coefficient_calculator_ZZ import calculate_coefficients_AC, read_masked_data
+from density_matrix_calculator import calculate_density_matrix_AC, O_bell_prime1
 from Bell_inequality_optimizer import bell_inequality_optimization, inequality_function
 import matplotlib.pyplot as plt
 
@@ -19,22 +19,31 @@ phi_paths = {
 
 cos_psi_data = read_data(os.path.join(ZZ_path, "psi_data_4.txt"))
 ZZ_inv_mass = read_data(os.path.join(ZZ_path, "ZZ_inv_mass_4.txt"))
+# #mask = read_masked_data(cos_psi_data, ZZ_inv_mass, (0.7, 0.85), (200, 300))
+# mask = None
+# # Read data and apply mask if provided
+# theta_values = {1: np.arccos(read_data(cos_theta_paths[1]))[0], 3: np.arccos(read_data(cos_theta_paths[3]))[0]}
+# phi_values = {1: read_data(phi_paths[1])[0], 3: read_data(phi_paths[3])[0]}
+# if mask is not None:
+#     theta_values = {key: theta[mask] for key, theta in theta_values.items()}
+#     phi_values = {key: phi[mask] for key, phi in phi_values.items()}
+
 
 # Step 1: Calculate coefficients for whole dataset
-A_coefficients, C_coefficients = calculate_coefficients(cos_theta_paths, phi_paths, mask=None)
-density_matrix = calculate_density_matrix(A_coefficients, C_coefficients)
+A_coefficients, C_coefficients = calculate_coefficients_AC(cos_theta_paths, phi_paths, mask=None)
+density_matrix = calculate_density_matrix_AC(A_coefficients, C_coefficients)
 
 # Step 2: Perform Bell operator optimization
 total_bell_value, optimal_params = bell_inequality_optimization(density_matrix, O_bell_prime1)
 print(f"Maximized Bell inequality value for whole phase space: {total_bell_value}")
 
 # Step 3: Find coefficients for masked phase space
-mask = read_masked_data(cos_psi_data, ZZ_inv_mass, (0, 0.2), (300, 325))
-A_coefficients, C_coefficients = calculate_coefficients(cos_theta_paths, phi_paths, mask)
-density_matrix = calculate_density_matrix(A_coefficients, C_coefficients)
+mask = read_masked_data(cos_psi_data, ZZ_inv_mass, (0.75, 0.76), (200, 210))
+A_coefficients, C_coefficients = calculate_coefficients_AC(cos_theta_paths, phi_paths, mask)
+density_matrix = calculate_density_matrix_AC(A_coefficients, C_coefficients)
 
 # Step 4: Calculate Bell operator for masked space
-masked_bell_value, _ = bell_inequality_optimization(density_matrix, O_bell_prime1)
+masked_bell_value = inequality_function(density_matrix, O_bell_prime1, optimal_params)
 print(f"Maximized Bell inequality value for region: {masked_bell_value}")
 
 # Step 5: Generate mesh grid for cos_psi and ZZ_inv_mass
