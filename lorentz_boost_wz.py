@@ -1,6 +1,5 @@
 import os
 import numpy as np
-import wadllib
 from lhe_reading_WW import find_latest_run_dir
 from histo_plotter import read_data
 
@@ -43,37 +42,98 @@ def execute_boost(vec_array, boost_array):
     vec_array_boosted = [lorentz_boost(find_beta(boost_vec)) @ vec for vec, boost_vec in zip(vec_array, boost_array)]
     return np.array(vec_array_boosted)
 
+
+# Calculate invariant mass
+def calc_inv_mass(four_vec):
+    return np.sqrt(four_vec[0]**2 - np.sum(four_vec[1:]**2))
+
+
+# Old method to calculate azimuthal angle
 def azimuthal_angle(lep_vec, parent_axis):
-    parent_axis = parent_axis / np.linalg.norm(parent_axis)
-
-    # Project lep_vec onto the plane perpendicular to parent_axis
-    v_parallel = np.dot(lep_vec, parent_axis) * parent_axis  
-    v_perpendicular = lep_vec - v_parallel                   
-
-    # Reference direction: projection of the global x-axis onto the plane perpendicular to parent_axis
-    e_z = np.array([0, 0, 1])                               
-    e_z_parallel = np.dot(e_z, parent_axis) * parent_axis    
-    e_z_perpendicular = e_z - e_z_parallel                 
-
     # Normalise
-    v_perpendicular = v_perpendicular / np.linalg.norm(v_perpendicular)
-    e_z_perpendicular = e_z_perpendicular / np.linalg.norm(e_z_perpendicular)
+    parent_axis = parent_axis / np.linalg.norm(parent_axis) # Boson flight path in the diboson CM frame
+    e_z = np.array([0,0,1]) # Z-axis or beam axis
+    # Calculate the normal to the production plane
+    n_p = np.cross(parent_axis, e_z)
+    n_p = n_p / np.linalg.norm(n_p)
+    # Calculate the normal to the decay plane
+    n_d = np.cross(lep_vec, parent_axis)
+    n_d = n_d / np.linalg.norm(n_d)
+    # Calculate the azimuthal angle
+    cos_phi = n_p @ n_d
+    phi = np.arccos(cos_phi)
+    # Determine sign of phi
+    sign = np.sign(e_z @ np.cross(n_p, n_d))
+    return sign * phi
 
-    sin_phi = np.linalg.norm(np.cross(v_perpendicular, e_z_perpendicular))
-    cos_phi = np.dot(v_perpendicular, e_z_perpendicular)
+def rotation_matrix(axis, theta):
+    axis = axis / np.linalg.norm(axis)
+    rotation = np.array([[np.cos(theta) + axis[0]**2 * (1 - np.cos(theta)),
+                          axis[0] * axis[1] * (1 - np.cos(theta)) - axis[2] * np.sin(theta),
+                          axis[0] * axis[2] * (1 - np.cos(theta)) + axis[1] * np.sin(theta)],
+                         [axis[1] * axis[0] * (1 - np.cos(theta)) + axis[2] * np.sin(theta),
+                          np.cos(theta) + axis[1]**2 * (1 - np.cos(theta)),
+                          axis[1] * axis[2] * (1 - np.cos(theta)) - axis[0] * np.sin(theta)],
+                         [axis[2] * axis[0] * (1 - np.cos(theta)) - axis[1] * np.sin(theta),
+                          axis[2] * axis[1] * (1 - np.cos(theta)) + axis[0] * np.sin(theta),
+                          np.cos(theta) + axis[2]**2 * (1 - np.cos(theta))]])
+    return rotation
 
-    # Use the dot product with a reference direction to determine the sign of phi
-    e_ref = np.cross(parent_axis, e_z_perpendicular)                                                 
-    e_ref = e_ref / np.linalg.norm(e_ref)  # normalise
+# Code from fortran code to rotate a vector
+def rotinvp(vec, ref):
+    """
+    Rotate the 3-vector 'vec' so that the 3-vector 'ref' becomes aligned with the z-axis.
+    This uses the Rodrigues rotation formula.
+    """
+    norm_ref = np.linalg.norm(ref)
+    if norm_ref == 0:
+        # No meaningful rotation if the reference vector is zero.
+        return vec.copy()
+    # Unit vector along the ref direction.
+    u = ref / norm_ref
+    # Target direction: along the positive z-axis.
+    target = np.array([0.0, 0.0, 1.0])
+    dot = np.clip(np.dot(u, target), -1.0, 1.0)
+    angle = np.arccos(dot)
+    # Determine the rotation axis.
+    axis = np.cross(u, target)
+    axis_norm = np.linalg.norm(axis)
+    if axis_norm < 1e-12:
+        # If u is parallel (or anti-parallel) to target.
+        if dot < 0:
+            # For anti-parallel, choose an arbitrary orthogonal axis.
+            axis = np.array([1.0, 0.0, 0.0])
+            angle = np.pi
+        else:
+            return vec.copy()
+    else:
+        axis = axis / axis_norm
+    # Rodrigues rotation formula:
+    vec_rot = (vec * np.cos(angle) +
+               np.cross(axis, vec) * np.sin(angle) +
+               axis * np.dot(axis, vec) * (1 - np.cos(angle)))
+    return vec_rot
 
-    # Check the sign of phi
-    if np.dot(v_perpendicular, e_ref) < 0:
-        sin_phi = - sin_phi  
-
-    # Compute the azimuthal angle 
-    phi = np.arctan2(sin_phi, cos_phi)
-
+def azimuthal_angle2(lep_vec, parent_axis):
+    # Normalise
+    parent_axis = parent_axis / np.linalg.norm(parent_axis) # Boson flight path in the diboson CM frame
+    e_z = np.array([0,0,1]) # Z-axis
+    # Find rotation axis
+    rot_axis = np.cross(e_z, parent_axis)
+    rot_axis = rot_axis / np.linalg.norm(rot_axis)
+    # Find rotation angle
+    cos_theta = e_z @ parent_axis
+    theta = np.arccos(cos_theta)
+    # Rotate lepton vector
+    lep_vec_rot = rotation_matrix(rot_axis, theta) @ lep_vec
+    # Calculate azimuthal angle
+    phi = np.arctan2(lep_vec_rot[1], lep_vec_rot[0])
     return phi
+
+def calc_scattering_angle(parent_axis):
+    beam_axis = np.array([0,0,1])
+    cos_psi = parent_axis @ beam_axis
+    return cos_psi
 
 def calc_polar_angle(lep_array, parent_array, name, run_num):
     lep_vec = lep_array[:, 1:]  # Take spatial components of leptons
@@ -86,19 +146,16 @@ def calc_polar_angle(lep_array, parent_array, name, run_num):
     # Calculate cos(theta) for each event
     cos_theta = np.array([(lep_vec[i] @ parent_vec[i]) / (lep_norm[i] * parent_norm[i]) for i in range(len(lep_norm))])
 
-    # Normalize parent_vec to use as the parent axis for azimuthal angle calculation
-    parent_axis = parent_vec / parent_norm[:, np.newaxis]  # Ensure proper normalization
-
-    # Calculate azimuthal angles for each event
-    phi = np.array([azimuthal_angle(lep_vec[i], parent_axis[i]) for i in range(len(lep_vec))])
-
     # Save cos(theta) data to a file
     file_path_theta = os.path.join(particle_directories[name], f"theta_data_{run_num}.txt")
     np.savetxt(file_path_theta, cos_theta)
 
-    # Save phi data to a file
-    file_path_phi = os.path.join(particle_directories[name], f"phi_data_{run_num}.txt")
-    np.savetxt(file_path_phi, phi)
+    # Calculate scattering angle for each event
+    parent_axis = parent_vec / parent_norm[:, np.newaxis]
+    cos_psi = np.array([calc_scattering_angle(parent_axis[i]) for i in range(len(lep_vec))]) # Psi is scattering angle
+    # Save cos(psi) data to file
+    file_path_psi = os.path.join(process_dir, f"Plots and data/psi_data_{run_num}.txt")
+    np.savetxt(file_path_psi, cos_psi)
 
 # Main function for processing data and calculating the Lorentz boost and angles
 def main():
@@ -117,12 +174,21 @@ def main():
     e_plus_intermed = execute_boost(particle_arrays['e+'], diboson_array)
     e_plus_boosted = execute_boost(e_plus_intermed, w_boosted)
     calc_polar_angle(e_plus_boosted, w_boosted, 'e+', run_number)
+    phi = np.array([azimuthal_angle2(e_plus_intermed[:, 1:][i], w_boosted[:, 1:][i]) for i in range(len(e_plus_boosted[:, 1:]))])
+    # Save phi data to a file
+    file_path_phi = os.path.join(particle_directories['e+'], f"phi_data_{run_number}.txt")
+    np.savetxt(file_path_phi, phi)
+
 
     # Boost calculations for mu+
     z_boosted = execute_boost(particle_arrays['z'], diboson_array)
     mu_plus_intermed = execute_boost(particle_arrays['mu+'], diboson_array)
     mu_plus_boosted = execute_boost(mu_plus_intermed, z_boosted)
     calc_polar_angle(mu_plus_boosted, z_boosted, 'mu+', run_number)
+    phi = np.array([azimuthal_angle2(mu_plus_intermed[:, 1:][i], z_boosted[:, 1:][i]) for i in range(len(mu_plus_boosted[:, 1:]))])
+    # Save phi data to a file
+    file_path_phi = os.path.join(particle_directories['mu+'], f"phi_data_{run_number}.txt")
+    np.savetxt(file_path_phi, phi)
 
     # Boost calculations for mu-
     mu_minus_intermed = execute_boost(particle_arrays['mu-'], diboson_array)

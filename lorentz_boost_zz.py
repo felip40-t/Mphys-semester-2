@@ -1,6 +1,5 @@
 import os
 import numpy as np
-from concurrent.futures import ThreadPoolExecutor
 from lhe_reading_WW import find_latest_run_dir
 from histo_plotter import read_data
 
@@ -25,14 +24,12 @@ def lorentz_boost(beta_vector):
     gamma = 1 / np.sqrt(1 - total_beta**2)
     boost = np.identity(4)
     beta_vector = np.array(beta_vector)
-
-    # Update the boost matrix based on gamma and the beta vector
     boost[1:, 1:] += (gamma - 1) * np.outer(beta_vector, beta_vector) / total_beta**2
     boost[0, 1:] = boost[1:, 0] = -gamma * beta_vector
     boost[0, 0] = gamma
     return boost
 
-# Calculate the velocity (beta) from the four-momentum
+# Calculate beta from the four-momentum
 def find_beta(four_momentum):
     return four_momentum[1:4] / four_momentum[0]
 
@@ -45,6 +42,8 @@ def execute_boost(vec_array, boost_array):
 def calc_inv_mass(four_vec):
     return np.sqrt(four_vec[0]**2 - np.sum(four_vec[1:]**2))
 
+
+# Old method to calculate azimuthal angle
 def azimuthal_angle(lep_vec, parent_axis):
     # Normalise
     parent_axis = parent_axis / np.linalg.norm(parent_axis) # Boson flight path in the diboson CM frame
@@ -74,6 +73,41 @@ def rotation_matrix(axis, theta):
                           axis[2] * axis[1] * (1 - np.cos(theta)) + axis[0] * np.sin(theta),
                           np.cos(theta) + axis[2]**2 * (1 - np.cos(theta))]])
     return rotation
+
+# Code from fortran code to rotate a vector
+def rotinvp(vec, ref):
+    """
+    Rotate the 3-vector 'vec' so that the 3-vector 'ref' becomes aligned with the z-axis.
+    This uses the Rodrigues rotation formula.
+    """
+    norm_ref = np.linalg.norm(ref)
+    if norm_ref == 0:
+        # No meaningful rotation if the reference vector is zero.
+        return vec.copy()
+    # Unit vector along the ref direction.
+    u = ref / norm_ref
+    # Target direction: along the positive z-axis.
+    target = np.array([0.0, 0.0, 1.0])
+    dot = np.clip(np.dot(u, target), -1.0, 1.0)
+    angle = np.arccos(dot)
+    # Determine the rotation axis.
+    axis = np.cross(u, target)
+    axis_norm = np.linalg.norm(axis)
+    if axis_norm < 1e-12:
+        # If u is parallel (or anti-parallel) to target.
+        if dot < 0:
+            # For anti-parallel, choose an arbitrary orthogonal axis.
+            axis = np.array([1.0, 0.0, 0.0])
+            angle = np.pi
+        else:
+            return vec.copy()
+    else:
+        axis = axis / axis_norm
+    # Rodrigues rotation formula:
+    vec_rot = (vec * np.cos(angle) +
+               np.cross(axis, vec) * np.sin(angle) +
+               axis * np.dot(axis, vec) * (1 - np.cos(angle)))
+    return vec_rot
 
 def azimuthal_angle2(lep_vec, parent_axis):
     # Normalise
@@ -111,21 +145,12 @@ def calc_polar_angle(lep_array, parent_array, name, run_num):
     file_path_theta = os.path.join(particle_directories[name], f"theta_data_{run_num}.txt")
     np.savetxt(file_path_theta, cos_theta)
 
-    # Normalize parent_vec to use as the parent axis for azimuthal angle calculation
-    parent_axis = parent_vec / parent_norm[:, np.newaxis]
-
     # Calculate scattering angle for each event
-    cos_psi = np.array([calc_scattering_angle(parent_axis[i]) for i in range(len(lep_vec))])
-
+    parent_axis = parent_vec / parent_norm[:, np.newaxis]
+    cos_psi = np.array([calc_scattering_angle(parent_axis[i]) for i in range(len(lep_vec))]) # Psi is scattering angle
     # Save cos(psi) data to file
     file_path_psi = os.path.join(process_dir, f"Plots and data/psi_data_{run_num}.txt")
     np.savetxt(file_path_psi, cos_psi)
-
-    # Calculate azimuthal angles for each event
-    phi = np.array([azimuthal_angle2(lep_vec[i], parent_vec[i]) for i in range(len(lep_vec))])
-    # Save phi data to a file
-    file_path_phi = os.path.join(particle_directories[name], f"phi_data_{run_num}.txt")
-    np.savetxt(file_path_phi, phi)
 
 # Main function for processing data and calculating the Lorentz boost and angles
 def main():
@@ -143,13 +168,26 @@ def main():
     z1_boosted = execute_boost(particle_arrays['z1'], diboson_array)
     e_plus_intermed = execute_boost(particle_arrays['e+'], diboson_array)
     e_plus_boosted = execute_boost(e_plus_intermed, z1_boosted)
+    # Calculate polar angles for each event
     calc_polar_angle(e_plus_boosted, z1_boosted, 'e+', run_number)
+    # Calculate azimuthal angles for each event
+    phi = np.array([azimuthal_angle2(e_plus_intermed[:, 1:][i], z1_boosted[:, 1:][i]) for i in range(len(e_plus_boosted[:, 1:]))])
+    # Save phi data to a file
+    file_path_phi = os.path.join(particle_directories['e+'], f"phi_data_{run_number}.txt")
+    np.savetxt(file_path_phi, phi)
+
 
     # Boost calculations for mu+
     z2_boosted = execute_boost(particle_arrays['z2'], diboson_array)
     mu_plus_intermed = execute_boost(particle_arrays['mu+'], diboson_array)
     mu_plus_boosted = execute_boost(mu_plus_intermed, z2_boosted)
+    # Calculate polar angles for each event
     calc_polar_angle(mu_plus_boosted, z2_boosted, 'mu+', run_number)
+    # Calculate azimuthal angles for each event
+    phi = np.array([azimuthal_angle2(mu_plus_intermed[:, 1:][i], z2_boosted[:, 1:][i]) for i in range(len(mu_plus_boosted[:, 1:]))])
+    # Save phi data to a file
+    file_path_phi = os.path.join(particle_directories['mu+'], f"phi_data_{run_number}.txt")
+    np.savetxt(file_path_phi, phi)
 
     ZZ_inv_mass = np.apply_along_axis(calc_inv_mass, 1, diboson_array)
     file_path_inv_mass = os.path.join(process_dir, f"Plots and data/ZZ_inv_mass_{run_number}.txt")

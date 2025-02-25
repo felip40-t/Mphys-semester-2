@@ -169,7 +169,7 @@ def calculate_coefficients_AC(theta_paths, phi_paths, mask=None):
                 else:
                     C_coefficients[(l1, m1, l3, m3)] = - 8 * np.pi * np.sqrt(5) * gamma / ETA
 
-    return A_coefficients, C_coefficients, alpha_values, gamma_values
+    return A_coefficients, C_coefficients # , alpha_values, gamma_values
 
 def save_coefficients(A_coefficients, C_coefficients, alpha_values, gamma_values, ZZ_path):
     """
@@ -216,5 +216,5 @@ def main():
     A_coefficients, C_coefficients, alpha_values, gamma_values = calculate_coefficients_AC(cos_theta_paths, phi_paths)
     save_coefficients(A_coefficients, C_coefficients, alpha_values, gamma_values, ZZ_path)
 
-main()
+#main()
 

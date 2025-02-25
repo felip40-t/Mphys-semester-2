@@ -55,7 +55,7 @@ for process_name in processes_to_run:
     counts_2, bin_edges_2 = np.histogram(phi_values_2, bins=num_bins)
     
     # Plot the histograms on the same figure
-    plt.figure(figsize=(10, 7), dpi=800)
+    plt.figure(figsize=(12, 8), dpi=800)
     
     # Plot histogram for the first particle (mu+ or mu-)
     if 'mu+' in particle_files:
@@ -78,7 +78,7 @@ for process_name in processes_to_run:
     plt.grid(axis='y')
     
     plt.xlim(-np.pi, np.pi)
-    plt.ylim(0,0.25)
+    plt.ylim(0.1,0.2)
     
     if process_name == 'WW':
         plt.text(-3, 0.24, r"$ p \; p \; \to \; e^+ \; \nu_e \; \mu^- \; \bar{\nu}_{\mu}$" + '\n' + r"$\sqrt{s} = 13 \, \mathrm{TeV}$", 

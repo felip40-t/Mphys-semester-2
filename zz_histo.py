@@ -12,7 +12,7 @@ data_dir_mu_plus = os.path.join(base_path, "mu+/theta_data_4.txt")
 
 
 
-# Read data for both e- and e+ from run 10
+# Read data for both e- and e+ from run 4
 cos_theta_values_mu_plus = read_data(data_dir_mu_plus)
 cos_theta_values_e_plus = read_data(data_dir_e_plus)
 
