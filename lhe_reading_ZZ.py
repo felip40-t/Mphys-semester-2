@@ -101,7 +101,7 @@ def process_last_run(base_dir, particle_directories):
 
 def main():
     mg5_install_dir = "/home/felipetcach/project/MG5_aMC_v3_5_6"
-    process_dir = os.path.join(mg5_install_dir, "pp_ZZ_SM")
+    process_dir = os.path.join(mg5_install_dir, "pp_ZZ_fiducial")
     base_dir = os.path.join(process_dir, "Events")
     
     particle_directories = {
@@ -115,8 +115,8 @@ def main():
     NEVENTS = 1_000_000
 
     # Run MadGraph and process data
-    run_madgraph(mg5_install_dir, process_dir, ENERGY, NEVENTS)
-    #process_last_run(base_dir, particle_directories)
+    #run_madgraph(mg5_install_dir, process_dir, ENERGY, NEVENTS)
+    process_last_run(base_dir, particle_directories)
 
 
 if __name__ == "__main__":

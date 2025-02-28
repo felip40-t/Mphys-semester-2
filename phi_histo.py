@@ -75,7 +75,7 @@ for process_name in processes_to_run:
     plt.tick_params(axis='y', labelright=False, right=True)
     
     # Add grid lines
-    plt.grid(axis='y')
+    plt.grid(True)
     
     plt.xlim(-np.pi, np.pi)
     plt.ylim(0.1,0.2)

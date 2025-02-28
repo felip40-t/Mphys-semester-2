@@ -3,12 +3,12 @@ import numpy as np
 from lhe_reading_WW import find_latest_run_dir
 from histo_plotter import read_data
 
-# Update the MadGraph5 directory and process directory to WZ_process
+# Update the MadGraph5 directory and process directory to ZZ_process
 mg5_install_dir = "/home/felipetcach/project/MG5_aMC_v3_5_6"
-process_dir = os.path.join(mg5_install_dir, "pp_ZZ_SM")
+process_dir = os.path.join(mg5_install_dir, "pp_ZZ_fiducial")  # Updated process directory
 base_dir = os.path.join(process_dir, "Events")
 
-# Particle directories corresponding to the WZ process
+# Particle directories corresponding to the ZZ process
 particle_directories = {
     'mu+': os.path.join(process_dir, "Plots and data/mu+"),  # mu+
     'mu-': os.path.join(process_dir, "Plots and data/mu-"),  # mu-
@@ -132,7 +132,7 @@ def calc_scattering_angle(parent_axis):
 
 def calc_polar_angle(lep_array, parent_array, name, run_num):
     lep_vec = lep_array[:, 1:]  # Take spatial components of leptons
-    parent_vec = parent_array[:, 1:]  # Take spatial components of parent (W or Z)
+    parent_vec = parent_array[:, 1:]  # Take spatial components of parent boson
 
     # Compute norms for normalization
     lep_norm = np.linalg.norm(lep_vec, axis=1)

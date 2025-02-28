@@ -1,8 +1,8 @@
 import numpy as np
 import os
 from histo_plotter import read_data
-from coefficient_calculator_WW import calculate_coefficients, save_coefficients, read_masked_data
-from density_matrix_calculator import read_coefficients, calculate_density_matrix, O_bell_prime
+from coefficient_calculator_WW import calculate_coefficients, read_masked_data
+from density_matrix_calculator import calculate_density_matrix_AC, O_bell_prime1
 from Bell_inequality_optimizer import bell_inequality_optimization, inequality_function
 import matplotlib.pyplot as plt
 
@@ -22,19 +22,10 @@ WW_inv_mass = read_data(os.path.join(WW_path, "WW_inv_mass_1.txt"))
 
 # Step 1: Calculate coefficients for whole dataset
 A_coefficients, C_coefficients = calculate_coefficients(cos_theta_paths, phi_paths, mask=None)
-save_coefficients(A_coefficients, C_coefficients, WW_path)
+density_matrix = calculate_density_matrix_AC(A_coefficients, C_coefficients)
 
-# Step 2: Read coefficients and calculate the density matrix
-A_coefficients_file = os.path.join(WW_path, "A_coefficients_run_1.csv")
-C_coefficients_file = os.path.join(WW_path, "C_coefficients_run_1.csv")
-A_coefficients = read_coefficients(A_coefficients_file)
-C_coefficients = read_coefficients(C_coefficients_file)
-density_matrix = calculate_density_matrix(A_coefficients, C_coefficients)
-
-# Step 3: Perform Bell operator optimization
-total_bell_value, optimal_params = bell_inequality_optimization(density_matrix, O_bell_prime)
-while total_bell_value < 1.0:
-    total_bell_value, optimal_params = bell_inequality_optimization(density_matrix, O_bell_prime)
+# Step 2: Perform Bell operator optimization
+total_bell_value, optimal_params = bell_inequality_optimization(density_matrix, O_bell_prime1)
 print(f"Maximized Bell inequality value for whole phase space: {total_bell_value}")
 
 # Step 4: Find coefficients for masked phase space

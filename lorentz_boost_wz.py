@@ -125,7 +125,7 @@ def azimuthal_angle2(lep_vec, parent_axis):
     cos_theta = e_z @ parent_axis
     theta = np.arccos(cos_theta)
     # Rotate lepton vector
-    lep_vec_rot = rotation_matrix(rot_axis, theta) @ lep_vec
+    lep_vec_rot = rotinvp(lep_vec, parent_axis)
     # Calculate azimuthal angle
     phi = np.arctan2(lep_vec_rot[1], lep_vec_rot[0])
     return phi
@@ -161,7 +161,7 @@ def calc_polar_angle(lep_array, parent_array, name, run_num):
 def main():
     # Find the latest run directory and run number
     #_, run_number = find_latest_run_dir(base_dir)
-    run_number = 3
+    run_number = 2
     # Read the four-momenta data for all particles in the process
     particle_arrays = {particle_name: read_data(os.path.join(directory, f"data_{run_number}.txt"))
                       for particle_name, directory in particle_directories.items()}
@@ -174,7 +174,7 @@ def main():
     e_plus_intermed = execute_boost(particle_arrays['e+'], diboson_array)
     e_plus_boosted = execute_boost(e_plus_intermed, w_boosted)
     calc_polar_angle(e_plus_boosted, w_boosted, 'e+', run_number)
-    phi = np.array([azimuthal_angle2(e_plus_intermed[:, 1:][i], w_boosted[:, 1:][i]) for i in range(len(e_plus_boosted[:, 1:]))])
+    phi = np.array([azimuthal_angle(e_plus_intermed[:, 1:][i], w_boosted[:, 1:][i]) for i in range(len(e_plus_boosted[:, 1:]))])
     # Save phi data to a file
     file_path_phi = os.path.join(particle_directories['e+'], f"phi_data_{run_number}.txt")
     np.savetxt(file_path_phi, phi)
@@ -185,7 +185,7 @@ def main():
     mu_plus_intermed = execute_boost(particle_arrays['mu+'], diboson_array)
     mu_plus_boosted = execute_boost(mu_plus_intermed, z_boosted)
     calc_polar_angle(mu_plus_boosted, z_boosted, 'mu+', run_number)
-    phi = np.array([azimuthal_angle2(mu_plus_intermed[:, 1:][i], z_boosted[:, 1:][i]) for i in range(len(mu_plus_boosted[:, 1:]))])
+    phi = np.array([azimuthal_angle(mu_plus_intermed[:, 1:][i], z_boosted[:, 1:][i]) for i in range(len(mu_plus_boosted[:, 1:]))])
     # Save phi data to a file
     file_path_phi = os.path.join(particle_directories['mu+'], f"phi_data_{run_number}.txt")
     np.savetxt(file_path_phi, phi)
