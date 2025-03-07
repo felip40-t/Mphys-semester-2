@@ -11,7 +11,7 @@ def read_data(filepath):
 processes = {
     "ZZ": {
         "base_path": "/home/felipetcach/project/MG5_aMC_v3_5_6/pp_ZZ_SM/Plots and data",
-        "particles": {"mu+": "mu+/phi_data_4.txt", "e+": "e+/phi_data_4.txt"},
+        "particles": {"mu+": "mu+/phi_data_4_t2.txt", "e+": "e+/phi_data_4_t2.txt"},
     },
     "WZ": {
         "base_path": "/home/felipetcach/project/MG5_aMC_v3_5_6/pp_WZ_SM/Plots and data",
@@ -67,8 +67,8 @@ for process_name in processes_to_run:
     plt.hist(phi_values_2, bins=num_bins, density=True, histtype='step', edgecolor='red', label=r"$e^+$")
     
     # Set the x-axis label for phi and the y-axis label for normalized differential cross section
-    plt.xlabel(r'$\phi$', fontsize=20)
-    plt.ylabel(r'$1/\sigma{\cdot}d\sigma/d\phi$', fontsize=20)
+    plt.xlabel(r'$\phi^*$', fontsize=20)
+    plt.ylabel(r'$1/\sigma{\cdot}d\sigma/d\phi^*$', fontsize=20)
     
     # Adjust tick parameters
     plt.tick_params(axis='both', which='major', labelsize=16)
@@ -79,6 +79,8 @@ for process_name in processes_to_run:
     
     plt.xlim(-np.pi, np.pi)
     plt.ylim(0.1,0.2)
+    plt.yticks([0.1, 0.11, 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, 0.18, 0.19, 0.2])
+    
     
     if process_name == 'WW':
         plt.text(-3, 0.24, r"$ p \; p \; \to \; e^+ \; \nu_e \; \mu^- \; \bar{\nu}_{\mu}$" + '\n' + r"$\sqrt{s} = 13 \, \mathrm{TeV}$", 
@@ -110,7 +112,7 @@ for process_name in processes_to_run:
     elif process_name == 'WZ':
         figure_name = "WZmu+_e+_phi_histo_run_2.pdf"
     else:
-        figure_name = "ZZmu+_e+_phi_histo_run_4.pdf"
+        figure_name = "ZZmu+_e+_phi_histo_run_4_t2.pdf"
         
     figure_name_png = figure_name.replace(".pdf", ".png")
     

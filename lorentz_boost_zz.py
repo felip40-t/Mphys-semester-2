@@ -5,7 +5,7 @@ from histo_plotter import read_data
 
 # Update the MadGraph5 directory and process directory to ZZ_process
 mg5_install_dir = "/home/felipetcach/project/MG5_aMC_v3_5_6"
-process_dir = os.path.join(mg5_install_dir, "pp_ZZ_fiducial")  # Updated process directory
+process_dir = os.path.join(mg5_install_dir, "pp_ZZ_SM")  # Updated process directory
 base_dir = os.path.join(process_dir, "Events")
 
 # Particle directories corresponding to the ZZ process
@@ -158,36 +158,73 @@ def main():
     _, run_number = find_latest_run_dir(base_dir)
 
     # Read the four-momenta data for all particles in the process
-    particle_arrays = {particle_name: read_data(os.path.join(directory, f"data_{run_number}.txt"))
+    particle_arrays = {particle_name: read_data(os.path.join(directory, f"data_{run_number}.txt"))[:200000]
                       for particle_name, directory in particle_directories.items()}
 
     # Reconstruct the total diboson system (z1 + z2)
     diboson_array = particle_arrays['z1'] + particle_arrays['z2']
 
-    # Boost calculations for e+ 
+    # Boost into diboson CM
     z1_boosted = execute_boost(particle_arrays['z1'], diboson_array)
     e_plus_intermed = execute_boost(particle_arrays['e+'], diboson_array)
-    e_plus_boosted = execute_boost(e_plus_intermed, z1_boosted)
+
+    # Rotate system
+    e_plus_rotated = []
+    z1_rotated = []
+    for e_plus_vec, diboson_vec in zip(e_plus_intermed, diboson_array):
+        rotated_vec = rotinvp(e_plus_vec[1:], diboson_vec[1:])
+        rotated_vec = np.insert(rotated_vec, 0, e_plus_vec[0])
+        e_plus_rotated.append(rotated_vec)
+    e_plus_rotated = np.array(e_plus_rotated)
+
+    for z1_vec, diboson_vec in zip(z1_boosted, diboson_array):
+        rotated_vec = rotinvp(z1_vec[1:], diboson_vec[1:])
+        rotated_vec = np.insert(rotated_vec, 0, z1_vec[0])
+        z1_rotated.append(rotated_vec)
+    z1_rotated = np.array(z1_rotated)
+
+    # Boost into the z1 rest frame
+    e_plus_boosted = execute_boost(e_plus_rotated, z1_rotated)
+
     # Calculate polar angles for each event
-    calc_polar_angle(e_plus_boosted, z1_boosted, 'e+', run_number)
+    calc_polar_angle(e_plus_boosted, z1_rotated, 'e+', run_number)
     # Calculate azimuthal angles for each event
-    phi = np.array([azimuthal_angle2(e_plus_intermed[:, 1:][i], z1_boosted[:, 1:][i]) for i in range(len(e_plus_boosted[:, 1:]))])
+    phi = np.array([np.arctan2(row[2], row[1]) for row in e_plus_boosted])
     # Save phi data to a file
-    file_path_phi = os.path.join(particle_directories['e+'], f"phi_data_{run_number}.txt")
+    file_path_phi = os.path.join(particle_directories['e+'], f"phi_data_{run_number}_t2.txt")
     np.savetxt(file_path_phi, phi)
 
 
     # Boost calculations for mu+
     z2_boosted = execute_boost(particle_arrays['z2'], diboson_array)
     mu_plus_intermed = execute_boost(particle_arrays['mu+'], diboson_array)
-    mu_plus_boosted = execute_boost(mu_plus_intermed, z2_boosted)
+
+    # Rotate system
+    mu_plus_rotated = []
+    z2_rotated = []
+    for mu_plus_vec, diboson_vec in zip(mu_plus_intermed, diboson_array):
+        rotated_vec = rotinvp(mu_plus_vec[1:], diboson_vec[1:])
+        rotated_vec = np.insert(rotated_vec, 0, mu_plus_vec[0])
+        mu_plus_rotated.append(rotated_vec)
+    mu_plus_rotated = np.array(mu_plus_rotated)
+
+    for z2_vec, diboson_vec in zip(z2_boosted, diboson_array):
+        rotated_vec = rotinvp(z2_vec[1:], diboson_vec[1:])
+        rotated_vec = np.insert(rotated_vec, 0, z2_vec[0])
+        z2_rotated.append(rotated_vec)
+    z2_rotated = np.array(z2_rotated)
+
+    # Boost into the z2 rest frame
+    mu_plus_boosted = execute_boost(mu_plus_rotated, z2_rotated)
+
     # Calculate polar angles for each event
-    calc_polar_angle(mu_plus_boosted, z2_boosted, 'mu+', run_number)
+    calc_polar_angle(mu_plus_boosted, z2_rotated, 'mu+', run_number)
     # Calculate azimuthal angles for each event
-    phi = np.array([azimuthal_angle2(mu_plus_intermed[:, 1:][i], z2_boosted[:, 1:][i]) for i in range(len(mu_plus_boosted[:, 1:]))])
+    phi = np.array([np.arctan2(row[2], row[1]) for row in mu_plus_boosted])
     # Save phi data to a file
-    file_path_phi = os.path.join(particle_directories['mu+'], f"phi_data_{run_number}.txt")
+    file_path_phi = os.path.join(particle_directories['mu+'], f"phi_data_{run_number}_t2.txt")
     np.savetxt(file_path_phi, phi)
+
 
     ZZ_inv_mass = np.apply_along_axis(calc_inv_mass, 1, diboson_array)
     file_path_inv_mass = os.path.join(process_dir, f"Plots and data/ZZ_inv_mass_{run_number}.txt")
