@@ -8,12 +8,12 @@ from histo_plotter import read_data
 ZZ_path = "/home/felipetcach/project/MG5_aMC_v3_5_6/pp_ZZ_SM/Plots and data"
 # Read theta and phi values for both datasets
 cos_theta_paths = {
-    1: os.path.join(ZZ_path, "mu+/theta_data_4.txt"),
-    3: os.path.join(ZZ_path, "e+/theta_data_4.txt")
+    1: os.path.join(ZZ_path, "mu+/theta_data_4_new.txt"),
+    3: os.path.join(ZZ_path, "e+/theta_data_4_new.txt")
 }
 phi_paths = {
-    1: os.path.join(ZZ_path, "mu+/phi_data_4.txt"),
-    3: os.path.join(ZZ_path, "e+/phi_data_4.txt")
+    1: os.path.join(ZZ_path, "mu+/phi_data_4_new.txt"),
+    3: os.path.join(ZZ_path, "e+/phi_data_4_new.txt")
 }
 
 # Constants
@@ -99,7 +99,7 @@ def calculate_coefficients_fgh(theta_paths, phi_paths, mask=None):
     Calculate the f, g, and h coefficients and return them as dictionaries.
     """
     # Read data and apply mask if provided
-    theta_values = {1: np.arccos(read_data(theta_paths[1])), 3: np.arccos(read_data(theta_paths[3]))}
+    theta_values = {1: read_data(theta_paths[1]), 3: read_data(theta_paths[3])}
     phi_values = {1: read_data(phi_paths[1]), 3: read_data(phi_paths[3])}
     if mask is not None:
         theta_values = {key: theta[mask] for key, theta in theta_values.items()}
@@ -129,7 +129,7 @@ def calculate_coefficients_AC(theta_paths, phi_paths, mask=None):
     Calculate the A and C coefficients and return them as dictionaries.
     If a mask is provided, it will be applied to the data.
     """
-    theta_values = {1: np.arccos(read_data(theta_paths[1])), 3: np.arccos(read_data(theta_paths[3]))}
+    theta_values = {1: read_data(theta_paths[1]), 3: read_data(theta_paths[3])}
     phi_values = {1: read_data(phi_paths[1]), 3: read_data(phi_paths[3])}
     
     # Apply mask if provided
@@ -141,6 +141,21 @@ def calculate_coefficients_AC(theta_paths, phi_paths, mask=None):
     C_coefficients = {}
     alpha_values = {1: {}, 3: {}}
     gamma_values = {}
+
+    # for i in [1, 3]:
+    #     cos_2phi = np.mean(np.cos(2 * phi_values[i]))
+    #     # uncertainty on cos_2phi
+    #     cos2phi_unc = np.std(np.cos(2 * phi_values[i])) / np.sqrt(len(phi_values[i]))
+
+    #     cos_theta_sq = np.mean(np.cos(theta_values[i]) ** 2)
+    #     # uncertainty on cos_theta_sq
+    #     cos_theta_sq_unc = np.std(np.cos(theta_values[i]) ** 2) / np.sqrt(len(theta_values[i]))
+
+    #     coeff1 = 0.25 * (np.sqrt(15 / (2 * np.pi))) * cos_2phi * (1 - cos_theta_sq)
+    #     # uncertainty on coeff1
+    #     coeff1_unc = 0.25 * (np.sqrt(15 / (2 * np.pi))) * np.sqrt((cos2phi_unc ** 2) * (1 - cos_theta_sq) ** 2 + cos_2phi ** 2 * (cos_theta_sq_unc ** 2))
+    #     print(f"alpha_{2,-2}^{i} = ", coeff1, "+-", coeff1_unc)
+
 
     # Compute A coefficients
     for dataset in [1, 3]:

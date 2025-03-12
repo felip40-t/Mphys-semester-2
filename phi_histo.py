@@ -11,7 +11,7 @@ def read_data(filepath):
 processes = {
     "ZZ": {
         "base_path": "/home/felipetcach/project/MG5_aMC_v3_5_6/pp_ZZ_SM/Plots and data",
-        "particles": {"mu+": "mu+/phi_data_4_t2.txt", "e+": "e+/phi_data_4_t2.txt"},
+        "particles": {"mu+": "mu+/phi_data_4_new.txt", "e+": "e+/phi_data_4_new.txt"},
     },
     "WZ": {
         "base_path": "/home/felipetcach/project/MG5_aMC_v3_5_6/pp_WZ_SM/Plots and data",
@@ -112,7 +112,7 @@ for process_name in processes_to_run:
     elif process_name == 'WZ':
         figure_name = "WZmu+_e+_phi_histo_run_2.pdf"
     else:
-        figure_name = "ZZmu+_e+_phi_histo_run_4_t2.pdf"
+        figure_name = "ZZmu+_e+_phi_histo_run_4_new.pdf"
         
     figure_name_png = figure_name.replace(".pdf", ".png")
     

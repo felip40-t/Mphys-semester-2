@@ -9,16 +9,16 @@ import matplotlib.pyplot as plt
 ZZ_path = "/home/felipetcach/project/MG5_aMC_v3_5_6/pp_ZZ_SM/Plots and data"
 # Read theta and phi values for both datasets
 cos_theta_paths = {
-    1: os.path.join(ZZ_path, "mu+/theta_data_4.txt"),
-    3: os.path.join(ZZ_path, "e+/theta_data_4.txt")
+    1: os.path.join(ZZ_path, "mu+/theta_data_4_new.txt"),
+    3: os.path.join(ZZ_path, "e+/theta_data_4_new.txt")
 }
 phi_paths = {
     1: os.path.join(ZZ_path, "mu+/phi_data_4.txt"),
     3: os.path.join(ZZ_path, "e+/phi_data_4.txt")
 }
 
-cos_psi_data = read_data(os.path.join(ZZ_path, "psi_data_4.txt"))
-ZZ_inv_mass = read_data(os.path.join(ZZ_path, "ZZ_inv_mass_4.txt"))
+# cos_psi_data = read_data(os.path.join(ZZ_path, "psi_data_4.txt"))
+# ZZ_inv_mass = read_data(os.path.join(ZZ_path, "ZZ_inv_mass_4.txt"))
 # #mask = read_masked_data(cos_psi_data, ZZ_inv_mass, (0.7, 0.85), (200, 300))
 # mask = None
 # # Read data and apply mask if provided

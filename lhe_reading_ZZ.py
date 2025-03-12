@@ -63,7 +63,7 @@ def read_lhe_write_data(lhe_file_path, particle_directories, number):
     file_handles = {}
     for particle_id, directory in particle_directories.items():
         os.makedirs(directory, exist_ok=True)
-        file_handles[particle_id] = open(os.path.join(directory, f"data_{number}.txt"), 'a')
+        file_handles[particle_id] = open(os.path.join(directory, f"data_{number}.txt"), 'w')
         # Write cross section
         with open(os.path.join(directory, f"cross_sec_{number}.txt"), 'w') as f:
             f.write(f"{cross_section}\n")
@@ -98,10 +98,35 @@ def process_last_run(base_dir, particle_directories):
     print(f"Found LHE file: {lhe_file_path}")
     read_lhe_write_data(lhe_file_path, particle_directories, number)
 
+def process_multiple_runs(base_dir, particle_directories, run_number_start, run_number_end):
+    """
+    Process multiple runs by reading their LHE files.
+    """
+    for number in range(run_number_start, run_number_end + 1):
+        run_dir = os.path.join(base_dir, f"run_{number:02d}")
+        print(f"Processing run directory: {run_dir}")
+
+        # Locate LHE file in the run directory
+        lhe_file = glob(os.path.join(run_dir, "*.lhe.gz"))
+        if not lhe_file:
+            raise FileNotFoundError("No LHE file found in the run directory.")
+        
+        lhe_file_path = lhe_file[0]
+        print(f"Found LHE file: {lhe_file_path}")
+        read_lhe_write_data(lhe_file_path, particle_directories, number)
+
+def combine_data(particle_directories, run_number_start, run_number_end):
+    """
+    Combine data from multiple runs for each particle.
+    """
+    for particle_id, directory in particle_directories.items():
+        data_files = [os.path.join(directory, f"data_{i}.txt") for i in range(run_number_start, run_number_end + 1)]
+        combined_data = np.concatenate([np.loadtxt(f) for f in data_files])
+        np.savetxt(os.path.join(directory, "combined_data.txt"), combined_data)
 
 def main():
     mg5_install_dir = "/home/felipetcach/project/MG5_aMC_v3_5_6"
-    process_dir = os.path.join(mg5_install_dir, "pp_ZZ_fiducial")
+    process_dir = os.path.join(mg5_install_dir, "pp_ZZ_SM")
     base_dir = os.path.join(process_dir, "Events")
     
     particle_directories = {
@@ -115,9 +140,10 @@ def main():
     NEVENTS = 1_000_000
 
     # Run MadGraph and process data
-    #run_madgraph(mg5_install_dir, process_dir, ENERGY, NEVENTS)
-    process_last_run(base_dir, particle_directories)
-
+    # run_madgraph(mg5_install_dir, process_dir, ENERGY, NEVENTS)
+    # process_last_run(base_dir, particle_directories)
+    process_multiple_runs(base_dir, particle_directories, 10, 26)
+    combine_data(particle_directories, 10, 26)
 
 if __name__ == "__main__":
     main()

@@ -7,14 +7,14 @@ from histo_plotter import read_data
 base_path = "/home/felipetcach/project/MG5_aMC_v3_5_6/pp_ZZ_SM/Plots and data"
 
 # Define the data directories for e- and e+ angle_data_10
-data_dir_e_plus = os.path.join(base_path, "e+/theta_data_4.txt")
-data_dir_mu_plus = os.path.join(base_path, "mu+/theta_data_4.txt")
+data_dir_e_plus = os.path.join(base_path, "e+/theta_data_4_new.txt")
+data_dir_mu_plus = os.path.join(base_path, "mu+/theta_data_4_new.txt")
 
 
 
 # Read data for both e- and e+ from run 4
-cos_theta_values_mu_plus = read_data(data_dir_mu_plus)
-cos_theta_values_e_plus = read_data(data_dir_e_plus)
+cos_theta_values_mu_plus = np.cos(read_data(data_dir_mu_plus))
+cos_theta_values_e_plus = np.cos(read_data(data_dir_e_plus))
 
 # Number of bins for the histogram
 num_bins = 40
@@ -57,8 +57,8 @@ plt.legend(loc='lower right', fontsize=20)
 
 
 # Save the figure
-figure_path = os.path.join(base_path, "ZZmu+_e+_cos_histo_run_4.pdf")
-figure_path_png = os.path.join(base_path, "ZZmu+_e+_cos_histo_run_4.png")
+figure_path = os.path.join(base_path, "ZZmu+_e+_cos_histo_run_4_new.pdf")
+figure_path_png = os.path.join(base_path, "ZZmu+_e+_cos_histo_run_4_new.png")
 
 
 plt.savefig(figure_path)
