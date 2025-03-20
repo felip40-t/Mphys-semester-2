@@ -8,12 +8,12 @@ from histo_plotter import read_data
 ZZ_path = "/home/felipetcach/project/MG5_aMC_v3_5_6/pp_ZZ_SM/Plots and data"
 # Read theta and phi values for both datasets
 cos_theta_paths = {
-    1: os.path.join(ZZ_path, "mu+/theta_data_4_new.txt"),
-    3: os.path.join(ZZ_path, "e+/theta_data_4_new.txt")
+    1: os.path.join(ZZ_path, "mu+/theta_data_combined.txt"),
+    3: os.path.join(ZZ_path, "e+/theta_data_combined.txt")
 }
 phi_paths = {
-    1: os.path.join(ZZ_path, "mu+/phi_data_4_new.txt"),
-    3: os.path.join(ZZ_path, "e+/phi_data_4_new.txt")
+    1: os.path.join(ZZ_path, "mu+/phi_data_combined.txt"),
+    3: os.path.join(ZZ_path, "e+/phi_data_combined.txt")
 }
 
 # Constants
@@ -24,104 +24,104 @@ g_R = 0.2234
 l_values = [1, 2]
 m_values = {1: [-1, 0, 1], 2: [-2, -1, 0, 1, 2]}
 
-a_matrix = ( 1 / (g_L**2 - g_R**2) ) * np.array([[g_R**2, 0, 0, 0, 0, g_L**2, 0, 0], 
-                                                 [0, g_R**2, 0, 0, 0, 0, g_L**2, 0], 
-                                                 [0, 0, g_R**2 - 0.5 * g_L**2, 0, 0, 0, 0, (np.sqrt(3)/2) * g_L**2], 
-                                                 [0, 0, 0, g_R**2 - g_L**2, 0, 0, 0, 0], 
-                                                 [0, 0, 0, 0, g_R**2 - g_L**2, 0, 0, 0], 
-                                                 [g_L**2, 0, 0, 0, 0, g_R**2, 0, 0], 
-                                                 [0, g_L**2, 0, 0, 0, 0, g_R**2, 0], 
-                                                 [0, 0, (np.sqrt(3)/2) * g_L**2, 0, 0, 0, 0, 0.5 * g_L**2 - g_R**2] ])
+# a_matrix = ( 1 / (g_L**2 - g_R**2) ) * np.array([[g_R**2, 0, 0, 0, 0, g_L**2, 0, 0], 
+#                                                  [0, g_R**2, 0, 0, 0, 0, g_L**2, 0], 
+#                                                  [0, 0, g_R**2 - 0.5 * g_L**2, 0, 0, 0, 0, (np.sqrt(3)/2) * g_L**2], 
+#                                                  [0, 0, 0, g_R**2 - g_L**2, 0, 0, 0, 0], 
+#                                                  [0, 0, 0, 0, g_R**2 - g_L**2, 0, 0, 0], 
+#                                                  [g_L**2, 0, 0, 0, 0, g_R**2, 0, 0], 
+#                                                  [0, g_L**2, 0, 0, 0, 0, g_R**2, 0], 
+#                                                  [0, 0, (np.sqrt(3)/2) * g_L**2, 0, 0, 0, 0, 0.5 * g_L**2 - g_R**2] ])
 
-# Helper function to determine if it's plus or minus based on dataset value
-def plus_minus(dataset):
-    if dataset == 1:
-        return +1
-    elif dataset == 3:
-        return -1
+# # Helper function to determine if it's plus or minus based on dataset value
+# def plus_minus(dataset):
+#     if dataset == 1:
+#         return +1
+#     elif dataset == 3:
+#         return -1
 
-# Projector 1
-def projector_1(theta, phi, dataset):
-    value = np.sqrt(2) * np.sin(theta) * (5 * np.cos(theta) + plus_minus(dataset) * 1) * np.cos(phi)
-    return value
+# # Projector 1
+# def projector_1(theta, phi, dataset):
+#     value = np.sqrt(2) * np.sin(theta) * (5 * np.cos(theta) + plus_minus(dataset) * 1) * np.cos(phi)
+#     return value
 
-# Projector 2
-def projector_2(theta, phi, dataset):
-    value = np.sqrt(2) * np.sin(theta) * (5 * np.cos(theta) + plus_minus(dataset) * 1) * np.sin(phi)
-    return value
+# # Projector 2
+# def projector_2(theta, phi, dataset):
+#     value = np.sqrt(2) * np.sin(theta) * (5 * np.cos(theta) + plus_minus(dataset) * 1) * np.sin(phi)
+#     return value
 
-# Projector 3
-def projector_3(theta, phi, dataset):
-    value = (1/4) * (5 + plus_minus(dataset) * 4 * np.cos(theta) + 15 * np.cos(2*theta))
-    return value
+# # Projector 3
+# def projector_3(theta, phi, dataset):
+#     value = (1/4) * (5 + plus_minus(dataset) * 4 * np.cos(theta) + 15 * np.cos(2*theta))
+#     return value
 
-# Projector 4
-def projector_4(theta, phi, dataset):
-    return 5 * np.sin(theta)**2 * np.cos(2 * phi)
+# # Projector 4
+# def projector_4(theta, phi, dataset):
+#     return 5 * np.sin(theta)**2 * np.cos(2 * phi)
 
-# Projector 5
-def projector_5(theta, phi, dataset):
-    return 5 * np.sin(theta)**2 * np.sin(2 * phi)
+# # Projector 5
+# def projector_5(theta, phi, dataset):
+#     return 5 * np.sin(theta)**2 * np.sin(2 * phi)
 
-# Projector 6
-def projector_6(theta, phi, dataset):
-    value = np.sqrt(2) * np.sin(theta) * (-5 * np.cos(theta) + plus_minus(dataset) * 1) * np.cos(phi)
-    return value
+# # Projector 6
+# def projector_6(theta, phi, dataset):
+#     value = np.sqrt(2) * np.sin(theta) * (-5 * np.cos(theta) + plus_minus(dataset) * 1) * np.cos(phi)
+#     return value
 
-# Projector 7
-def projector_7(theta, phi, dataset):
-    value = np.sqrt(2) * np.sin(theta) * (-5 * np.cos(theta) + plus_minus(dataset) * 1) * np.sin(phi)
-    return value
+# # Projector 7
+# def projector_7(theta, phi, dataset):
+#     value = np.sqrt(2) * np.sin(theta) * (-5 * np.cos(theta) + plus_minus(dataset) * 1) * np.sin(phi)
+#     return value
 
-# Projector 8
-def projector_8(theta, phi, dataset):
-    value = (1 / (4 * np.sqrt(3))) * (-5 + plus_minus(dataset) * 12 * np.cos(theta) + 15 * np.cos(2*theta))
-    return value
+# # Projector 8
+# def projector_8(theta, phi, dataset):
+#     value = (1 / (4 * np.sqrt(3))) * (-5 + plus_minus(dataset) * 12 * np.cos(theta) + 15 * np.cos(2*theta))
+#     return value
 
-# Define the vector of projectors
-def projector_vector(theta, phi, dataset):
-    # Call each projector function and store their results in a list or array
-    vector = np.array([
-        projector_1(theta, phi, dataset),
-        projector_2(theta, phi, dataset),
-        projector_3(theta, phi, dataset),
-        projector_4(theta, phi, dataset),
-        projector_5(theta, phi, dataset),
-        projector_6(theta, phi, dataset),
-        projector_7(theta, phi, dataset),
-        projector_8(theta, phi, dataset)
-    ])
-    return vector
+# # Define the vector of projectors
+# def projector_vector(theta, phi, dataset):
+#     # Call each projector function and store their results in a list or array
+#     vector = np.array([
+#         projector_1(theta, phi, dataset),
+#         projector_2(theta, phi, dataset),
+#         projector_3(theta, phi, dataset),
+#         projector_4(theta, phi, dataset),
+#         projector_5(theta, phi, dataset),
+#         projector_6(theta, phi, dataset),
+#         projector_7(theta, phi, dataset),
+#         projector_8(theta, phi, dataset)
+#     ])
+#     return vector
 
 
-def calculate_coefficients_fgh(theta_paths, phi_paths, mask=None):
-    """
-    Calculate the f, g, and h coefficients and return them as dictionaries.
-    """
-    # Read data and apply mask if provided
-    theta_values = {1: read_data(theta_paths[1]), 3: read_data(theta_paths[3])}
-    phi_values = {1: read_data(phi_paths[1]), 3: read_data(phi_paths[3])}
-    if mask is not None:
-        theta_values = {key: theta[mask] for key, theta in theta_values.items()}
-        phi_values = {key: phi[mask] for key, phi in phi_values.items()}
+# def calculate_coefficients_fgh(theta_paths, phi_paths, mask=None):
+#     """
+#     Calculate the f, g, and h coefficients and return them as dictionaries.
+#     """
+#     # Read data and apply mask if provided
+#     theta_values = {1: read_data(theta_paths[1]), 3: read_data(theta_paths[3])}
+#     phi_values = {1: read_data(phi_paths[1]), 3: read_data(phi_paths[3])}
+#     if mask is not None:
+#         theta_values = {key: theta[mask] for key, theta in theta_values.items()}
+#         phi_values = {key: phi[mask] for key, phi in phi_values.items()}
 
-    # Initialize coefficients
-    f_coefficients = np.zeros(8)
-    g_coefficients = np.zeros(8)
-    h_coefficients = np.zeros((8, 8))
+#     # Initialize coefficients
+#     f_coefficients = np.zeros(8)
+#     g_coefficients = np.zeros(8)
+#     h_coefficients = np.zeros((8, 8))
 
-    # Calculate projector vectors
-    p_1 = a_matrix @ projector_vector(theta_values[1], phi_values[1], 1)
-    p_3 = a_matrix @ projector_vector(theta_values[3], phi_values[3], 1)
+#     # Calculate projector vectors
+#     p_1 = a_matrix @ projector_vector(theta_values[1], phi_values[1], 1)
+#     p_3 = a_matrix @ projector_vector(theta_values[3], phi_values[3], 1)
 
-    # Calculate f and g coefficients using vectorized operations
-    f_coefficients = 0.5 * np.mean(p_1, axis=1)
-    g_coefficients = 0.5 * np.mean(p_3, axis=1)
+#     # Calculate f and g coefficients using vectorized operations
+#     f_coefficients = 0.5 * np.mean(p_1, axis=1)
+#     g_coefficients = 0.5 * np.mean(p_3, axis=1)
 
-    # Calculate h coefficients using vectorized operations
-    h_coefficients = 0.25 * np.mean(p_1[:, np.newaxis, :] * p_3[np.newaxis, :, :], axis=2)
+#     # Calculate h coefficients using vectorized operations
+#     h_coefficients = 0.25 * np.mean(p_1[:, np.newaxis, :] * p_3[np.newaxis, :, :], axis=2)
 
-    return f_coefficients, g_coefficients, h_coefficients
+#     return f_coefficients, g_coefficients, h_coefficients
 
 
 def calculate_coefficients_AC(theta_paths, phi_paths, mask=None):
@@ -139,8 +139,10 @@ def calculate_coefficients_AC(theta_paths, phi_paths, mask=None):
 
     A_coefficients = {1: {}, 3: {}}
     C_coefficients = {}
-    alpha_values = {1: {}, 3: {}}
-    gamma_values = {}
+    # alpha_values = {1: {}, 3: {}}
+    # gamma_values = {}
+    A_unc = {1: {}, 3: {}}
+    C_unc = {}
 
     # for i in [1, 3]:
     #     cos_2phi = np.mean(np.cos(2 * phi_values[i]))
@@ -161,30 +163,50 @@ def calculate_coefficients_AC(theta_paths, phi_paths, mask=None):
     for dataset in [1, 3]:
         for l in l_values:
             for m in m_values[l]:
-                alpha = np.mean(sph_harm_y(l, m, theta_values[dataset], phi_values[dataset])).astype(complex)
-                alpha_values[dataset][(l, m)] = alpha
+                alpha = np.mean(np.real(sph_harm_y(l, m, theta_values[dataset], phi_values[dataset])))
+                alpha_unc = np.std(np.real(sph_harm_y(l, m, theta_values[dataset], phi_values[dataset]))) / np.sqrt(len(theta_values[dataset]))
+                if (m != 0):
+                    alpha = np.sqrt(2) * alpha
+                    alpha_unc = np.sqrt(2) * alpha_unc
+                # alpha_values[dataset][(l, m)] = alpha
                 if l == 1:
                     A_coefficients[dataset][(l, m)] = -np.sqrt(8 * np.pi) * alpha / ETA
+                    A_unc[dataset][(l, m)] = np.sqrt(8 * np.pi) * alpha_unc / ETA
                 elif l == 2:
                     A_coefficients[dataset][(l, m)] = np.sqrt(40 * np.pi) * alpha
+                    A_unc[dataset][(l, m)] = np.sqrt(40 * np.pi) * alpha_unc
 
     # Compute C coefficients
     for l1, l3 in [(1, 1), (2, 2), (1, 2), (2, 1)]:
         for m1 in m_values[l1]:
             for m3 in m_values[l3]:
-                gamma = np.mean(sph_harm_y(l1, m1, theta_values[1], phi_values[1]) *
-                                sph_harm_y(l3, m3, theta_values[3], phi_values[3])).astype(complex)
-                gamma_values[(l1, m1, l3, m3)] = gamma
-                
+                sph_harm_1 = np.real(sph_harm_y(l1, m1, theta_values[1], phi_values[1]))
+                sph_harm_3 = np.real(sph_harm_y(l3, m3, theta_values[3], phi_values[3]))
+                product = sph_harm_1 * sph_harm_3
+                gamma = np.mean(product)
+                gamma_unc = np.std(product) / np.sqrt(len(theta_values[1]))
+
+                if (m1 != 0) and (m3 != 0):
+                    gamma *= 2
+                    gamma_unc *= 2
+                elif (m1 != 0) ^ (m3 != 0):
+                    gamma *= np.sqrt(2)
+                    gamma_unc *= np.sqrt(2)
+                    
+                # gamma_values[(l1, m1, l3, m3)] = gamma
+            
                 if l1 == l3:
                     if l1 == 1:
                         C_coefficients[(l1, m1, l3, m3)] = 8 * np.pi * gamma / (ETA ** 2)
+                        C_unc[(l1, m1, l3, m3)] = 8 * np.pi * gamma_unc / (ETA ** 2)
                     elif l1 == 2:
                         C_coefficients[(l1, m1, l3, m3)] = 40 * np.pi * gamma
+                        C_unc[(l1, m1, l3, m3)] = 40 * np.pi * gamma_unc
                 else:
                     C_coefficients[(l1, m1, l3, m3)] = - 8 * np.pi * np.sqrt(5) * gamma / ETA
+                    C_unc[(l1, m1, l3, m3)] = 8 * np.pi * np.sqrt(5) * gamma_unc / ETA
 
-    return A_coefficients, C_coefficients # , alpha_values, gamma_values
+    return A_coefficients, C_coefficients, A_unc, C_unc
 
 def save_coefficients(A_coefficients, C_coefficients, alpha_values, gamma_values, ZZ_path):
     """

@@ -17,10 +17,10 @@ particle_directories = {
     'e-': os.path.join(process_dir, "Plots and data/e-"),    # e-
 }
 
-run_number = 9
+run_number = 25
 
 # Read the four-momenta data for all particles in the process
-particle_arrays = {particle_name: read_data(os.path.join(directory, f"data_{run_number}.txt"))
+particle_arrays = {particle_name: read_data(os.path.join(directory, f"combined_data.txt"))
                     for particle_name, directory in particle_directories.items()}
 
 # Calculate the invariant mass of total system for each event
@@ -38,4 +38,4 @@ plt.xlabel("Invariant mass (GeV)")
 plt.ylabel("Frequency")
 
 # Save the plot
-plt.savefig(os.path.join(process_dir, "Plots and data", f"invariant_mass_{run_number}.pdf"))
+plt.savefig(os.path.join(process_dir, "Plots and data", f"invariant_mass_combined.pdf"))

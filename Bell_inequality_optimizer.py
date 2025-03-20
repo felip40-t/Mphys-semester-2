@@ -11,7 +11,7 @@ def inequality_function(density_matrix, O_bell_prime, parameters):
 
         O_bell = U_cross_V.conj().T @ O_bell_prime @ U_cross_V
         bell_inequality = np.trace(density_matrix @ O_bell)
-        return np.real(bell_inequality)
+        return bell_inequality.real()
 
 def bell_inequality_optimization(density_matrix, O_bell_prime):
     """

@@ -103,7 +103,7 @@ def process_multiple_runs(base_dir, particle_directories, run_number_start, run_
     Process multiple runs by reading their LHE files.
     """
     for number in range(run_number_start, run_number_end + 1):
-        run_dir = os.path.join(base_dir, f"run_{number:02d}")
+        run_dir = os.path.join(base_dir, f"run_{number}")
         print(f"Processing run directory: {run_dir}")
 
         # Locate LHE file in the run directory
@@ -121,8 +121,64 @@ def combine_data(particle_directories, run_number_start, run_number_end):
     """
     for particle_id, directory in particle_directories.items():
         data_files = [os.path.join(directory, f"data_{i}.txt") for i in range(run_number_start, run_number_end + 1)]
-        combined_data = np.concatenate([np.loadtxt(f) for f in data_files])
-        np.savetxt(os.path.join(directory, "combined_data.txt"), combined_data)
+        combined_data = np.concatenate([np.loadtxt(f, delimiter=',') for f in data_files])
+        np.savetxt(os.path.join(directory, "combined_data_temp.txt"), combined_data, delimiter=',')
+
+def add_data(particle_directories, run_number):
+    """
+    Add data from new runs to the existing combined data by appending directly to the file.
+    """
+    for particle_id, directory in particle_directories.items():
+        data_file = os.path.join(directory, f"combined_data_temp.txt")
+        combined_data_file = os.path.join(directory, "combined_data_new.txt")
+        
+        # Open the combined_data.txt file in append mode and write the new data
+        with open(data_file, 'r') as new_data, open(combined_data_file, 'a') as combined_data:
+            for line in new_data:
+                combined_data.write(line)
+
+def add_phase_points(directory, run_number):
+    """
+    Add phase points from run_number to combined data (ZZ_inv_mass_combined.txt and psi_data_combined.txt).
+    """
+    # Paths to the new data files
+    cos_psi_file = os.path.join(directory, f"psi_data_combined_temp.txt")
+    inv_mass_file = os.path.join(directory, f"ZZ_inv_mass_combined_temp.txt")
+    
+    # Paths to the combined data files
+    combined_cos_psi_file = os.path.join(directory, "psi_data_combined_new.txt")
+    combined_inv_mass_file = os.path.join(directory, "ZZ_inv_mass_combined_new.txt")
+    
+    # Append new data directly to the combined files
+    with open(cos_psi_file, 'r') as cos_psi_data, open(combined_cos_psi_file, 'a') as combined_cos_psi:
+        for line in cos_psi_data:
+            combined_cos_psi.write(line)
+    
+    with open(inv_mass_file, 'r') as inv_mass_data, open(combined_inv_mass_file, 'a') as combined_inv_mass:
+        for line in inv_mass_data:
+            combined_inv_mass.write(line)
+
+def add_angles(particle_directories, run_number):
+    """
+    Add decay angles after lorentz boost.
+    """
+    
+    for particle_id, directory in {k: v for k, v in particle_directories.items() if k in [-13, -11]}.items():
+        # Paths to the new data files
+        cos_theta_file = os.path.join(directory, f"theta_data_combined_temp.txt")
+        phi_file = os.path.join(directory, f"phi_data_combined_temp.txt")
+
+        combined_cos_theta_file = os.path.join(directory, "theta_data_combined_new.txt")
+        combined_phi_file = os.path.join(directory, "phi_data_combined_new.txt")
+    
+        # Append new data directly to the combined files
+        with open(cos_theta_file, 'r') as cos_theta_data, open(combined_cos_theta_file, 'a') as combined_cos_theta:
+            for line in cos_theta_data:
+                combined_cos_theta.write(line)
+        
+        with open(phi_file, 'r') as phi_data, open(combined_phi_file, 'a') as combined_phi:
+            for line in phi_data:
+                combined_phi.write(line)
 
 def main():
     mg5_install_dir = "/home/felipetcach/project/MG5_aMC_v3_5_6"
@@ -142,8 +198,12 @@ def main():
     # Run MadGraph and process data
     # run_madgraph(mg5_install_dir, process_dir, ENERGY, NEVENTS)
     # process_last_run(base_dir, particle_directories)
-    process_multiple_runs(base_dir, particle_directories, 10, 26)
-    combine_data(particle_directories, 10, 26)
+    # process_multiple_runs(base_dir, particle_directories, 112, 135)
+    # combine_data(particle_directories, 112, 135)
+    add_data(particle_directories, 29)
+    add_phase_points(os.path.join(process_dir, "Plots and data"), 29)
+    add_angles(particle_directories, 29)
+
 
 if __name__ == "__main__":
     main()

@@ -1,4 +1,5 @@
 import os
+from pdb import run
 import numpy as np
 from lhe_reading_WW import find_latest_run_dir
 from histo_plotter import read_data
@@ -89,7 +90,8 @@ def azimuthal_angle2(lep_vec, parent_axis):
     phi = np.arctan2(lep_vec_rot[1], lep_vec_rot[0])
     return phi
 
-def calc_scattering_angle(parent_axis):
+def calc_scattering_angle(parent_4_mom):
+    parent_axis = parent_4_mom[1:] / np.linalg.norm(parent_4_mom[1:])
     beam_axis = np.array([0,0,1])
     cos_psi = parent_axis @ beam_axis
     return cos_psi
@@ -292,46 +294,25 @@ def phistar(v1, v2, v3, v4):
 # Main function for processing data and calculating the Lorentz boost and angles
 def main():
     # Find the latest run directory and run number
-    _, run_number = find_latest_run_dir(base_dir)
-    run_number = 4
+    # _, run_number = find_latest_run_dir(base_dir)
+    #run_number = 29
 
     # Read the four-momenta data for all particles in the process
-    particle_arrays = {particle_name: read_data(os.path.join(directory, f"data_{run_number}.txt"))
+    particle_arrays = {particle_name: read_data(os.path.join(directory, f"combined_data_temp.txt"))
                       for particle_name, directory in particle_directories.items()}
 
     # Reconstruct the total diboson system
     diboson_array = sum(particle_arrays.values())
 
-    # # Reconstruct Zs
-    # z1_array = particle_arrays['e+'] + particle_arrays['e-']
-    # z2_array = particle_arrays['mu+'] + particle_arrays['mu-']
+    # Reconstruct Zs
+    z1_array = particle_arrays['e+'] + particle_arrays['e-']
 
-    # # Boost into diboson CM
-    # z1_boosted = execute_boost(particle_arrays['z1'], diboson_array)
-    # e_plus_intermed = execute_boost(particle_arrays['e+'], diboson_array)
-
-    # # Rotate system
-    # e_plus_rotated = []
-    # z1_rotated = []
-    # for e_plus_vec, diboson_vec in zip(e_plus_intermed, diboson_array):
-    #     rotated_vec = rotinvp(e_plus_vec[1:], diboson_vec[1:])
-    #     rotated_vec = np.insert(rotated_vec, 0, e_plus_vec[0])
-    #     e_plus_rotated.append(rotated_vec)
-    # e_plus_rotated = np.array(e_plus_rotated)
-
-    # for z1_vec, diboson_vec in zip(z1_boosted, diboson_array):
-    #     rotated_vec = rotinvp(z1_vec[1:], diboson_vec[1:])
-    #     rotated_vec = np.insert(rotated_vec, 0, z1_vec[0])
-    #     z1_rotated.append(rotated_vec)
-    # z1_rotated = np.array(z1_rotated)
-
-    # # Boost into the z1 rest frame
-    # e_plus_boosted = execute_boost(e_plus_rotated, z1_rotated)
-
-    # # Calculate polar angles for each event
-    # calc_polar_angle(e_plus_boosted, z1_rotated, 'e+', run_number)
-    # # Calculate azimuthal angles for each event
-    # phi = np.array([np.arctan2(row[2], row[1]) for row in e_plus_boosted])
+    # Calculate scattering angle of boosted z1 with beam axis
+    z1_boosted = execute_boost(z1_array, diboson_array)
+    cos_psi = np.array([calc_scattering_angle(z1_boosted[i]) for i in range(len(z1_boosted))])
+    # Save cos(psi) data to file
+    file_path_psi = os.path.join(process_dir, f"Plots and data/psi_data_combined_temp.txt")
+    np.savetxt(file_path_psi, cos_psi)
 
     # Calculate azimuthal angles for each event
     phi1_list = []
@@ -339,6 +320,8 @@ def main():
     theta1_list = []
     theta3_list = []
     for i in range(len(particle_arrays['e+'])):
+        if (i % 100000 == 0):
+            print(f"Processing event {i}")
         phi1, phi3, theta1, theta3 = phistar(particle_arrays['e+'][i], particle_arrays['e-'][i], particle_arrays['mu+'][i], particle_arrays['mu-'][i])
         phi1_list.append(phi1)
         phi3_list.append(phi3)
@@ -349,48 +332,19 @@ def main():
     theta1 = np.array(theta1_list)
     theta3 = np.array(theta3_list)
     # Save phi data to a file
-    file_path_phi_ep = os.path.join(particle_directories['e+'], f"phi_data_{run_number}_new.txt")
+    file_path_phi_ep = os.path.join(particle_directories['e+'], f"phi_data_combined_temp.txt")
     np.savetxt(file_path_phi_ep, phi1)
-    file_path_phi_mp = os.path.join(particle_directories['mu+'], f"phi_data_{run_number}_new.txt")
+    file_path_phi_mp = os.path.join(particle_directories['mu+'], f"phi_data_combined_temp.txt")
     np.savetxt(file_path_phi_mp, phi3)
 
     # Save theta data to a file
-    file_path_theta_ep = os.path.join(particle_directories['e+'], f"theta_data_{run_number}_new.txt")
+    file_path_theta_ep = os.path.join(particle_directories['e+'], f"theta_data_combined_temp.txt")
     np.savetxt(file_path_theta_ep, theta1)
-    file_path_theta_mp = os.path.join(particle_directories['mu+'], f"theta_data_{run_number}_new.txt")
+    file_path_theta_mp = os.path.join(particle_directories['mu+'], f"theta_data_combined_temp.txt")
     np.savetxt(file_path_theta_mp, theta3)
 
-
-    # # Boost calculations for mu+
-    # z2_boosted = execute_boost(particle_arrays['z2'], diboson_array)
-    # mu_plus_intermed = execute_boost(particle_arrays['mu+'], diboson_array)
-
-    # # Rotate system
-    # mu_plus_rotated = []
-    # z2_rotated = []
-    # for mu_plus_vec, diboson_vec in zip(mu_plus_intermed, diboson_array):
-    #     rotated_vec = rotinvp(mu_plus_vec[1:], diboson_vec[1:])
-    #     rotated_vec = np.insert(rotated_vec, 0, mu_plus_vec[0])
-    #     mu_plus_rotated.append(rotated_vec)
-    # mu_plus_rotated = np.array(mu_plus_rotated)
-
-    # for z2_vec, diboson_vec in zip(z2_boosted, diboson_array):
-    #     rotated_vec = rotinvp(z2_vec[1:], diboson_vec[1:])
-    #     rotated_vec = np.insert(rotated_vec, 0, z2_vec[0])
-    #     z2_rotated.append(rotated_vec)
-    # z2_rotated = np.array(z2_rotated)
-
-    # # Boost into the z2 rest frame
-    # mu_plus_boosted = execute_boost(mu_plus_rotated, z2_rotated)
-
-    # # Calculate polar angles for each event
-    # calc_polar_angle(mu_plus_boosted, z2_rotated, 'mu+', run_number)
-    # # Calculate azimuthal angles for each event
-    # phi = np.array([np.arctan2(row[2], row[1]) for row in mu_plus_boosted])
-    # Save phi data to a file
-
     ZZ_inv_mass = np.apply_along_axis(calc_inv_mass, 1, diboson_array)
-    file_path_inv_mass = os.path.join(process_dir, f"Plots and data/ZZ_inv_mass_{run_number}.txt")
+    file_path_inv_mass = os.path.join(process_dir, f"Plots and data/ZZ_inv_mass_combined_temp.txt")
     np.savetxt(file_path_inv_mass, ZZ_inv_mass)
 
 if __name__ == "__main__":

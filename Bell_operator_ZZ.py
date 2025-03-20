@@ -98,17 +98,17 @@ def inequality_function(parameters):
 
 # print(f"Maximized expectation value: {np.mean(B_list)} +- {np.std(B_list)}")
 
-parameters = np.random.rand(16)
-result = minimize(inequality_function, parameters, method='L-BFGS-B')
-optimal_params = result.x
-U_params = optimal_params[:8]
-V_params = optimal_params[8:]
-U = euler_unitary_matrix(U_params[0], U_params[1], U_params[2], U_params[3], U_params[4], U_params[5], U_params[6], U_params[7])
-V = euler_unitary_matrix(V_params[0], V_params[1], V_params[2], V_params[3], V_params[4], V_params[5], V_params[6], V_params[7])
-print(f"Maximized expectation value: {-result.fun}")
-print("U matrix:\n")
-for row in U:
-    print(" ".join(f"{x:6.2f}" for x in row))
-print("\nV matrix:\n")
-for row in V:
-    print(" ".join(f"{x:6.2f}" for x in row))
+# parameters = np.random.rand(16)
+# result = minimize(inequality_function, parameters, method='L-BFGS-B')
+# optimal_params = result.x
+# U_params = optimal_params[:8]
+# V_params = optimal_params[8:]
+# U = euler_unitary_matrix(U_params[0], U_params[1], U_params[2], U_params[3], U_params[4], U_params[5], U_params[6], U_params[7])
+# V = euler_unitary_matrix(V_params[0], V_params[1], V_params[2], V_params[3], V_params[4], V_params[5], V_params[6], V_params[7])
+# print(f"Maximized expectation value: {-result.fun}")
+# print("U matrix:\n")
+# for row in U:
+#     print(" ".join(f"{x:6.2f}" for x in row))
+# print("\nV matrix:\n")
+# for row in V:
+#     print(" ".join(f"{x:6.2f}" for x in row))

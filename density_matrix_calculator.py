@@ -44,27 +44,32 @@ O_bell_prime1 = -2/sqrt3 * (np.kron(S_x, S_x) + np.kron(S_y, S_y)) + np.kron(lam
 # print(O_bell_prime2)
 
 
-def calculate_density_matrix_AC(A_coefficients, C_coefficients):
+def calculate_density_matrix_AC(A_coefficients, C_coefficients, A_unc, C_unc):
     """
     Construct the density matrix using the A and C coefficients.
     """
     density_matrix = np.kron(I_3, I_3).astype(complex)
+    uncertainty_matrix = np.kron(I_3, I_3).astype(complex)
     
     for dataset, inner_dict in A_coefficients.items():
         for (l, m), A_value in inner_dict.items():
             T_op = T1_operators[m] if l == 1 else T2_operators[m]
             if dataset == 1:
                 density_matrix += A_value * np.kron(T_op, I_3)
+                uncertainty_matrix += (A_unc[dataset][(l, m)] * np.kron(T_op, I_3))**2
             elif dataset == 3:
                 density_matrix += A_value * np.kron(I_3, T_op)
+                uncertainty_matrix += (A_unc[dataset][(l, m)] * np.kron(I_3, T_op))**2
 
     for (l1, m1, l3, m3), C_value in C_coefficients.items():
         T1_op = T1_operators[m1] if l1 == 1 else T2_operators[m1]
         T2_op = T1_operators[m3] if l3 == 1 else T2_operators[m3]
         density_matrix += C_value * np.kron(T1_op, T2_op)
-
+        uncertainty_matrix += (C_unc[(l1, m1, l3, m3)] * np.kron(T1_op, T2_op))**2
+    
     density_matrix *= 1/9
-    return density_matrix
+    uncertainty_matrix = 1/9 * np.sqrt(uncertainty_matrix)
+    return density_matrix, uncertainty_matrix
 
 def calculate_density_matrix_fgh(f_coefficients, g_coefficients, h_coefficients):
     """
