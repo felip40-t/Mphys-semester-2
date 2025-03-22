@@ -5,7 +5,7 @@ def purity(density_matrix):
     """
     Calculate the purity of a density matrix.
     """
-    return np.trace(density_matrix.T @ density_matrix)
+    return np.trace(density_matrix @ density_matrix)
 
 def partial_trace(density_matrix, subsystem):
     """
@@ -50,11 +50,17 @@ def concurrence_lower(density_matrix):
     """
     rho_A = partial_trace(density_matrix, 1)
     rho_B = partial_trace(density_matrix, 2)
-    purity_A = purity(rho_A)
-    purity_B = purity(rho_B)
-    total_purity = purity(density_matrix)
-    if check_density_matrix(rho_A) and check_density_matrix(rho_B) and check_density_matrix(density_matrix):
-        print("All matrices are valid.")
-    else:
-        print("Invalid matrices.")
+    purity_A = np.real(purity(rho_A))
+    purity_B = np.real(purity(rho_B))
+    total_purity = np.real(purity(density_matrix))
     return 2 * max(0, total_purity - purity_A, total_purity - purity_B)
+
+def concurrence_upper(density_matrix):
+    """
+    Calculate the upper bound of the concurrence of a bipartite qutrit state.
+    """
+    rho_A = partial_trace(density_matrix, 1)
+    rho_B = partial_trace(density_matrix, 2)
+    purity_A = np.real(purity(rho_A))
+    purity_B = np.real(purity(rho_B))
+    return 2 * min(1 - purity_A, 1 - purity_B)

@@ -314,7 +314,7 @@ def main():
     file_path_psi = os.path.join(process_dir, f"Plots and data/psi_data_combined_temp.txt")
     np.savetxt(file_path_psi, cos_psi)
 
-    # Calculate azimuthal angles for each event
+    # Calculate decay angles for each event
     phi1_list = []
     phi3_list = []
     theta1_list = []
@@ -331,6 +331,7 @@ def main():
     phi3 = np.array(phi3_list)
     theta1 = np.array(theta1_list)
     theta3 = np.array(theta3_list)
+    
     # Save phi data to a file
     file_path_phi_ep = os.path.join(particle_directories['e+'], f"phi_data_combined_temp.txt")
     np.savetxt(file_path_phi_ep, phi1)

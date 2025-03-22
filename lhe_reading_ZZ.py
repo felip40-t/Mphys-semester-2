@@ -180,6 +180,8 @@ def add_angles(particle_directories, run_number):
             for line in phi_data:
                 combined_phi.write(line)
 
+
+
 def main():
     mg5_install_dir = "/home/felipetcach/project/MG5_aMC_v3_5_6"
     process_dir = os.path.join(mg5_install_dir, "pp_ZZ_SM")
@@ -198,11 +200,11 @@ def main():
     # Run MadGraph and process data
     # run_madgraph(mg5_install_dir, process_dir, ENERGY, NEVENTS)
     # process_last_run(base_dir, particle_directories)
-    # process_multiple_runs(base_dir, particle_directories, 112, 135)
-    # combine_data(particle_directories, 112, 135)
-    add_data(particle_directories, 29)
-    add_phase_points(os.path.join(process_dir, "Plots and data"), 29)
-    add_angles(particle_directories, 29)
+    process_multiple_runs(base_dir, particle_directories, 194, 305)
+    combine_data(particle_directories, 194, 305)
+    # add_data(particle_directories, 29)
+    # add_phase_points(os.path.join(process_dir, "Plots and data"), 29)
+    # add_angles(particle_directories, 29)
 
 
 if __name__ == "__main__":

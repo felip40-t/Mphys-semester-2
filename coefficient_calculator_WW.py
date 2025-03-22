@@ -24,33 +24,44 @@ def calculate_coefficients(theta_paths, phi_paths, mask=None):
 
     A_coefficients = {1: {}, 3: {}}
     C_coefficients = {}
+    A_unc = {1: {}, 3: {}}
+    C_unc = {}
 
     # Compute A coefficients
     for dataset in [1, 3]:
         for l in l_values:
             for m in m_values[l]:
                 alpha = np.mean(sph_harm_y(l, m, theta_values[dataset], phi_values[dataset]))
+                alpha_unc = np.std(sph_harm_y(l, m, theta_values[dataset], phi_values[dataset])) / np.sqrt(len(theta_values[dataset]))
                 if l == 1:
                     A_coefficients[dataset][(l, m)] = -np.sqrt(8 * np.pi) * alpha / ETA
+                    A_unc[dataset][(l, m)] = np.sqrt(8 * np.pi) * alpha_unc / ETA
                 elif l == 2:
                     A_coefficients[dataset][(l, m)] = np.sqrt(40 * np.pi) * alpha
+                    A_unc[dataset][(l, m)] = np.sqrt(40 * np.pi) * alpha_unc
 
     # Compute C coefficients
     for l1, l3 in [(1, 1), (2, 2), (1, 2), (2, 1)]:
         for m1 in m_values[l1]:
             for m3 in m_values[l3]:
-                gamma = np.mean(sph_harm_y(l1, m1, theta_values[1], phi_values[1]) *
-                                sph_harm_y(l3, m3, theta_values[3], phi_values[3]))
-                
+                sph_harm_1 = sph_harm_y(l1, m1, theta_values[1], phi_values[1])
+                sph_harm_3 = sph_harm_y(l3, m3, theta_values[3], phi_values[3])
+                product = sph_harm_1 * sph_harm_3
+                gamma = np.mean(product)
+                gamma_unc = np.std(product) / np.sqrt(len(theta_values[1]))
+
                 if l1 == l3:
                     if l1 == 1:
                         C_coefficients[(l1, m1, l3, m3)] = 8 * np.pi * gamma / (ETA ** 2)
+                        C_unc[(l1, m1, l3, m3)] = 8 * np.pi * gamma_unc / (ETA ** 2)
                     elif l1 == 2:
                         C_coefficients[(l1, m1, l3, m3)] = 40 * np.pi * gamma
+                        C_unc[(l1, m1, l3, m3)] = 40 * np.pi * gamma_unc
                 else:
                     C_coefficients[(l1, m1, l3, m3)] = - 8 * np.pi * np.sqrt(5) * gamma / ETA
+                    C_unc[(l1, m1, l3, m3)] = 8 * np.pi * np.sqrt(5) * gamma_unc / ETA
 
-    return A_coefficients, C_coefficients
+    return A_coefficients, C_coefficients, A_unc, C_unc
 
 def save_coefficients(A_coefficients, C_coefficients, ZZ_path):
     """

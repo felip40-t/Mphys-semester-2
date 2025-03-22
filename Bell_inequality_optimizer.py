@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.optimize import minimize
+from scipy.optimize import differential_evolution
 from Unitary_Matrix import euler_unitary_matrix
 
 def inequality_function(density_matrix, O_bell_prime, parameters):
@@ -28,8 +28,8 @@ def bell_inequality_optimization(density_matrix, O_bell_prime):
         bell_inequality = np.trace(density_matrix @ O_bell)
         return - np.real(bell_inequality)
     
-    parameters = np.random.rand(16)
-    result = minimize(inequality_function_pseudo, parameters, method='L-BFGS-B')
+    bounds = [(0, 2 * np.pi)] * 16  # Define bounds for the parameters
+    result = differential_evolution(inequality_function_pseudo, bounds)
     optimal_params = result.x
     bell_value = - result.fun
 

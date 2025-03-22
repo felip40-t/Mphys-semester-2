@@ -1,4 +1,3 @@
-from hepunits import g
 import numpy as np
 import os
 import csv
@@ -139,36 +138,15 @@ def calculate_coefficients_AC(theta_paths, phi_paths, mask=None):
 
     A_coefficients = {1: {}, 3: {}}
     C_coefficients = {}
-    # alpha_values = {1: {}, 3: {}}
-    # gamma_values = {}
     A_unc = {1: {}, 3: {}}
     C_unc = {}
-
-    # for i in [1, 3]:
-    #     cos_2phi = np.mean(np.cos(2 * phi_values[i]))
-    #     # uncertainty on cos_2phi
-    #     cos2phi_unc = np.std(np.cos(2 * phi_values[i])) / np.sqrt(len(phi_values[i]))
-
-    #     cos_theta_sq = np.mean(np.cos(theta_values[i]) ** 2)
-    #     # uncertainty on cos_theta_sq
-    #     cos_theta_sq_unc = np.std(np.cos(theta_values[i]) ** 2) / np.sqrt(len(theta_values[i]))
-
-    #     coeff1 = 0.25 * (np.sqrt(15 / (2 * np.pi))) * cos_2phi * (1 - cos_theta_sq)
-    #     # uncertainty on coeff1
-    #     coeff1_unc = 0.25 * (np.sqrt(15 / (2 * np.pi))) * np.sqrt((cos2phi_unc ** 2) * (1 - cos_theta_sq) ** 2 + cos_2phi ** 2 * (cos_theta_sq_unc ** 2))
-    #     print(f"alpha_{2,-2}^{i} = ", coeff1, "+-", coeff1_unc)
-
 
     # Compute A coefficients
     for dataset in [1, 3]:
         for l in l_values:
             for m in m_values[l]:
-                alpha = np.mean(np.real(sph_harm_y(l, m, theta_values[dataset], phi_values[dataset])))
-                alpha_unc = np.std(np.real(sph_harm_y(l, m, theta_values[dataset], phi_values[dataset]))) / np.sqrt(len(theta_values[dataset]))
-                if (m != 0):
-                    alpha = np.sqrt(2) * alpha
-                    alpha_unc = np.sqrt(2) * alpha_unc
-                # alpha_values[dataset][(l, m)] = alpha
+                alpha = np.mean(sph_harm_y(l, m, theta_values[dataset], phi_values[dataset]))
+                alpha_unc = np.std(sph_harm_y(l, m, theta_values[dataset], phi_values[dataset])) / np.sqrt(len(theta_values[dataset]))
                 if l == 1:
                     A_coefficients[dataset][(l, m)] = -np.sqrt(8 * np.pi) * alpha / ETA
                     A_unc[dataset][(l, m)] = np.sqrt(8 * np.pi) * alpha_unc / ETA
@@ -180,21 +158,12 @@ def calculate_coefficients_AC(theta_paths, phi_paths, mask=None):
     for l1, l3 in [(1, 1), (2, 2), (1, 2), (2, 1)]:
         for m1 in m_values[l1]:
             for m3 in m_values[l3]:
-                sph_harm_1 = np.real(sph_harm_y(l1, m1, theta_values[1], phi_values[1]))
-                sph_harm_3 = np.real(sph_harm_y(l3, m3, theta_values[3], phi_values[3]))
+                sph_harm_1 = sph_harm_y(l1, m1, theta_values[1], phi_values[1])
+                sph_harm_3 = sph_harm_y(l3, m3, theta_values[3], phi_values[3])
                 product = sph_harm_1 * sph_harm_3
                 gamma = np.mean(product)
                 gamma_unc = np.std(product) / np.sqrt(len(theta_values[1]))
 
-                if (m1 != 0) and (m3 != 0):
-                    gamma *= 2
-                    gamma_unc *= 2
-                elif (m1 != 0) ^ (m3 != 0):
-                    gamma *= np.sqrt(2)
-                    gamma_unc *= np.sqrt(2)
-                    
-                # gamma_values[(l1, m1, l3, m3)] = gamma
-            
                 if l1 == l3:
                     if l1 == 1:
                         C_coefficients[(l1, m1, l3, m3)] = 8 * np.pi * gamma / (ETA ** 2)

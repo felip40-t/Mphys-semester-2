@@ -1,4 +1,3 @@
-from math import cos
 import numpy as np
 import os
 from histo_plotter import read_data
@@ -6,7 +5,7 @@ from coefficient_calculator_ZZ import calculate_coefficients_AC, read_masked_dat
 from density_matrix_calculator import calculate_density_matrix_AC, O_bell_prime1
 from Bell_inequality_optimizer import bell_inequality_optimization, inequality_function
 from Unitary_Matrix import euler_unitary_matrix
-from concurrence_bound import concurrence_lower
+from concurrence_bound import concurrence_lower, check_density_matrix, concurrence_upper
 import matplotlib.pyplot as plt
 
 ZZ_path = "/home/felipetcach/project/MG5_aMC_v3_5_6/pp_ZZ_SM/Plots and data"
@@ -23,37 +22,17 @@ phi_paths = {
 cos_psi_data = read_data(os.path.join(ZZ_path, "psi_data_combined_new.txt"))
 ZZ_inv_mass = read_data(os.path.join(ZZ_path, "ZZ_inv_mass_combined_new.txt"))
 
-cos_psi_region = (0.0, 0.25)
-ZZ_inv_mass_region = (500, 600)
-
-# mask = read_masked_data(cos_psi_data, ZZ_inv_mass,  cos_psi_region, ZZ_inv_mass_region)
-# # Read data and apply mask if provided
-# theta_values = {1: read_data(cos_theta_paths[1]), 3: read_data(cos_theta_paths[3])}
-# phi_values = {1: read_data(phi_paths[1]), 3: read_data(phi_paths[3])}
-# if mask is not None:
-#     theta_values = {key: theta[mask] for key, theta in theta_values.items()}
-#     phi_values = {key: phi[mask] for key, phi in phi_values.items()}
-
-# print(len(theta_values[1]))
-
-# # Step 1: Calculate coefficients for whole dataset
-# A_coefficients, C_coefficients, A_uncertainties, C_uncertainties  = calculate_coefficients_AC(cos_theta_paths, phi_paths, mask=None)
-# density_matrix, uncertainty_matrix = calculate_density_matrix_AC(A_coefficients, C_coefficients, A_uncertainties, C_uncertainties)
-
-# # Step 2: Perform Bell operator optimization
-# total_bell_value, optimal_params = bell_inequality_optimization(density_matrix, O_bell_prime1)
-# print(f"Maximized Bell inequality value for whole phase space: {total_bell_value}")
-
+cos_psi_region = (0.0, 0.2)
+ZZ_inv_mass_region = (250, 300)
 
 # Use np.histogram2d to count the number of events in each bin
-
-# num_bins_cos_psi = 50
-# num_bins_inv_mass = 50
+# num_bins_cos_psi = 100
+# num_bins_inv_mass = 100
 # event_counts, x_edges, y_edges = np.histogram2d(cos_psi_data, ZZ_inv_mass, 
 #                                                 bins=[num_bins_cos_psi, num_bins_inv_mass], 
 #                                                 range=[[0, 1], [200, 1000]])
 # plt.figure(figsize=(8, 6))
-# plt.imshow(event_counts.T, origin='lower', extent=[0, 1, 200, 1000], aspect='auto', cmap='hot', vmin=0, vmax=5000)
+# plt.imshow(event_counts.T, origin='lower', extent=[0, 1, 200, 1000], aspect='auto', cmap='hot', vmin=0, vmax=2500)
 # plt.colorbar(label='Number of events')
 # plt.xlabel(r'$\cos{\Psi}$')
 # plt.ylabel(r'$M_{ZZ} (GeV) $')
@@ -62,16 +41,16 @@ ZZ_inv_mass_region = (500, 600)
 # event_plot_filename = os.path.join(ZZ_path, "event_count_heatmap_combined_new.pdf")
 # plt.savefig(event_plot_filename)
 
-# Step 3: Find coefficients for masked phase space
-mask = read_masked_data(cos_psi_data, ZZ_inv_mass, cos_psi_region, ZZ_inv_mass_region)
-A_coefficients, C_coefficients, A_uncertainties, C_uncertainties = calculate_coefficients_AC(cos_theta_paths, phi_paths, mask)
-density_matrix, uncertainty_matrix = calculate_density_matrix_AC(A_coefficients, C_coefficients, A_uncertainties, C_uncertainties)
+# # Find coefficients for masked phase space
+# mask = read_masked_data(cos_psi_data, ZZ_inv_mass, cos_psi_region, ZZ_inv_mass_region)
+# A_coefficients, C_coefficients, A_uncertainties, C_uncertainties = calculate_coefficients_AC(cos_theta_paths, phi_paths, mask)
+# density_matrix, uncertainty_matrix = calculate_density_matrix_AC(A_coefficients, C_coefficients, A_uncertainties, C_uncertainties)
 
-# Calculate concurrence for masked space
-concurrence_value = concurrence_lower(density_matrix)
-print(f"Concurrence bound for region:\n Cos(Psi) = {cos_psi_region}, M_ZZ = {ZZ_inv_mass_region}\n Concurrence = {concurrence_value}")
+# # Calculate concurrence for masked space
+# concurrence_value = concurrence_lower(density_matrix)
+# print(f"Concurrence bound for region:\n Cos(Psi) = {cos_psi_region}, M_ZZ = {ZZ_inv_mass_region}\n Concurrence = {concurrence_value}")
 
-# # Step 4: Calculate Bell operator for masked space
+# # Calculate Bell operator for masked space
 # masked_bell_value, optimal_params = bell_inequality_optimization(density_matrix, O_bell_prime1)
 # U_params = optimal_params[:8]
 # V_params = optimal_params[8:]
@@ -83,12 +62,14 @@ print(f"Concurrence bound for region:\n Cos(Psi) = {cos_psi_region}, M_ZZ = {ZZ_
 # bell_value_uncertainty = np.sqrt(np.real(np.trace((uncertainty_matrix**2 @ O_bell_prime1**2))))
 # print(f"Maximized Bell inequality value for region:\n Cos(Psi) = {cos_psi_region}, M_ZZ = {ZZ_inv_mass_region}\n I_3 = {masked_bell_value} +- {bell_value_uncertainty}")
 
-# Step 5: Generate mesh grid for cos_psi and ZZ_inv_mass
+# Generate mesh grid for cos_psi and ZZ_inv_mass
 cos_psi_range = np.arange(0.0, 1.2, step=0.2) 
-inv_mass_range = np.arange(200.0, 1100.0, step=100.0) 
+inv_mass_range = np.arange(200.0, 1100.0, step=100.0)
+# inv_mass_range = np.concatenate((np.array([200.0, 250.0]), np.arange(300.0, 1100.0, step=100.0)))
 
-cos_psi_contour = np.arange(0.1, 1.1, step=0.2)   
+cos_psi_contour = np.arange(0.1, 1.1, step=0.2)
 inv_mass_contour = np.arange(250.0, 1050.0, step=100.0) 
+# inv_mass_contour = np.concatenate((np.array([225.0, 275.0]), np.arange(350.0, 1050.0, step=100.0)))
 
 cos_psi_grid, inv_mass_grid = np.meshgrid(cos_psi_contour, inv_mass_contour)
 
@@ -98,7 +79,7 @@ uncertainty_grid = np.zeros((8, 5))
 
 concurrence_grid = np.zeros((8, 5))
 
-# Step 7: Calculate Bell operator value for each point in the mesh grid
+# Calculate Bell operator value for each point in the mesh grid
 for i in range(len(inv_mass_range)-1):
     for j in range(len(cos_psi_range)-1):
         # Apply a mask for the current region in the mesh grid
@@ -110,7 +91,16 @@ for i in range(len(inv_mass_range)-1):
         A_coefficients, C_coefficients, A_uncertainties, C_uncertainties = calculate_coefficients_AC(cos_theta_paths, phi_paths, mask)
         density_matrix, uncertainty_matrix = calculate_density_matrix_AC(A_coefficients, C_coefficients, A_uncertainties, C_uncertainties)
         bell_value, optimal_params = bell_inequality_optimization(density_matrix, O_bell_prime1)
+        U_params = optimal_params[:8]
+        V_params = optimal_params[8:]
+        U = euler_unitary_matrix(*U_params)
+        V = euler_unitary_matrix(*V_params)
+        U_cross_V = np.kron(U, V)
+        uncertainty_matrix = U_cross_V.conj().T**2 @ uncertainty_matrix**2 @ U_cross_V**2
+        uncertainty_matrix = np.sqrt(np.abs(np.real(uncertainty_matrix)))
+        bell_value_uncertainty = np.sqrt(np.real(np.trace((uncertainty_matrix**2 @ O_bell_prime1**2))))
         bell_value_grid[i, j] = bell_value
+        uncertainty_grid[i, j] = bell_value_uncertainty
         concurrence_value = concurrence_lower(density_matrix)
         concurrence_grid[i, j] = concurrence_value
 
@@ -120,70 +110,73 @@ np.savetxt(os.path.join(ZZ_path, "bell_operator_grid_ZZ_new.txt"), bell_value_gr
 # Save the concurrence value grid to a file
 np.savetxt(os.path.join(ZZ_path, "concurrence_grid_ZZ_new.txt"), concurrence_grid, delimiter=',')
 
-# # Read the Bell operator value grid from the file
-# bell_value_grid = np.loadtxt(os.path.join(ZZ_path, "bell_operator_grid_ZZ_new.txt"), delimiter=',')
+# Read the Bell operator value grid from the file
+bell_value_grid = np.loadtxt(os.path.join(ZZ_path, "bell_operator_grid_ZZ_new.txt"), delimiter=',')
+print("Average Bell operator value:", np.mean(bell_value_grid))
 
-# Step 8: Plot the contour of Bell operator values
+# Read the concurrence value grid from the file
+concurrence_grid = np.loadtxt(os.path.join(ZZ_path, "concurrence_grid_ZZ_new.txt"), delimiter=',')
+
+# Plot the contour of Bell operator values
 plt.figure(figsize=(10, 8))
-
 # Define custom contour levels
-custom_levels = np.arange(1.0, 2.8, step=0.2)
-contour_filled = plt.contourf(cos_psi_grid, inv_mass_grid, bell_value_grid, levels=custom_levels, cmap='magma')
-contour_lines = plt.contour(cos_psi_grid, inv_mass_grid, bell_value_grid, levels=custom_levels, colors='black', linewidths=0.5)
-plt.clabel(contour_lines, inline=True, fontsize=8, fmt="%.2f")
-plt.colorbar(contour_filled, label='Bell Operator Value')
-
-plt.xlabel(r'$\cos{\Theta}$')  
-plt.ylabel(r'$M_{ZZ} (GeV)$')
+custom_levels = np.arange(0.8, 2.6, step=0.2)
+contour_filled = plt.contourf(cos_psi_grid, inv_mass_grid, bell_value_grid, levels=custom_levels, cmap='Blues')
+contour_lines = plt.contour(cos_psi_grid, inv_mass_grid, bell_value_grid, levels=custom_levels, colors='black', linewidths=0.7)
+plt.clabel(contour_lines, inline=True, fontsize=12, fmt="%.2f")
+colorbar = plt.colorbar(contour_filled, label=r'$\mathcal{I}_3$', orientation='vertical')
+colorbar.ax.yaxis.label.set_fontsize(16)
+plt.xlabel(r'$\cos{\Theta}$', fontsize=16)  
+plt.ylabel(r'$M_{ZZ} (GeV)$', fontsize=16)
 plot_filename = os.path.join(ZZ_path, "bell_operator_contour_ZZ_new.pdf")
 plt.savefig(plot_filename)
 
 # Step 9: Plot the 2D heatmap of Bell operator values
 plt.figure(figsize=(8, 6))
 plt.imshow(bell_value_grid, origin='lower', extent=[0, 1, 200, 1000], aspect='auto', cmap='plasma')
-plt.colorbar(label='Bell Operator Value')
-plt.xlabel(r'$\cos{\Theta}$')  
-plt.ylabel(r'$M_{ZZ} (GeV)$')
+colorbar = plt.colorbar(label=r'$\mathcal{I}_3$', orientation='vertical')
+colorbar.ax.yaxis.label.set_fontsize(16)
+plt.xlabel(r'$\cos{\Theta}$', fontsize=16)  
+plt.ylabel(r'$M_{ZZ} (GeV)$', fontsize=16)
 
 # Add the value of the Bell operator as a label to each square
 num_rows, num_cols = bell_value_grid.shape
 x_centers = np.linspace(0.1, 0.9, num_cols)  # Center of bins for cos_psi
-y_centers = np.linspace(250, 950, num_rows)  # Center of bins for M_ZZ
+y_centers = np.concatenate((np.array([225.0, 275.0]), np.arange(350.0, 1050.0, step=100.0)))  # Center of bins for M_ZZ
 for i, y in enumerate(y_centers):
     for j, x in enumerate(x_centers):
-        plt.text(x, y, f"{bell_value_grid[i, j]:.2f}", color="white", ha="center", va="center", fontsize=6)
+        plt.text(x, y, f"{bell_value_grid[i, j]:.2f}", color="white", ha="center", va="center", fontsize=9)
 
-# Save the 2D heatmap of Bell operator values
 heatmap_filename = os.path.join(ZZ_path, "bell_operator_heatmap_ZZ_new.pdf")
 plt.savefig(heatmap_filename)
 
 # Step 10: Plot the contour of concurrence values
 plt.figure(figsize=(10, 8))
-
 contour_filled = plt.contourf(cos_psi_grid, inv_mass_grid, concurrence_grid, cmap='viridis')
-contour_lines = plt.contour(cos_psi_grid, inv_mass_grid, concurrence_grid, colors='black', linewidths=0.5)
-plt.clabel(contour_lines, inline=True, fontsize=8, fmt="%.2f")
-plt.colorbar(contour_filled, label='Concurrence bound')
-plt.xlabel(r'$\cos{\Theta}$')
-plt.ylabel(r'$M_{ZZ} (GeV)$')
+contour_lines = plt.contour(cos_psi_grid, inv_mass_grid, concurrence_grid, colors='black', linewidths=0.7)
+plt.clabel(contour_lines, inline=True, fontsize=12, fmt="%.2f")
+colorbar = plt.colorbar(contour_filled, label=r'$\mathcal{C}_{LB}$', orientation='vertical')
+colorbar.ax.yaxis.label.set_fontsize(16)
+plt.xlabel(r'$\cos{\Theta}$', fontsize=16)
+plt.ylabel(r'$M_{ZZ} (GeV)$', fontsize=16)
 plot_filename = os.path.join(ZZ_path, "concurrence_contour_ZZ_new.pdf")
 plt.savefig(plot_filename)
 
 # Step 11: Plot the 2D heatmap of concurrence values
 plt.figure(figsize=(8, 6))
 plt.imshow(concurrence_grid, origin='lower', extent=[0, 1, 200, 1000], aspect='auto', cmap='viridis')
-plt.colorbar(label='Concurrence bound')
-plt.xlabel(r'$\cos{\Theta}$')   
-plt.ylabel(r'$M_{ZZ} (GeV)$')
+colorbar = plt.colorbar(label=r'$\mathcal{C}_{LB}$', orientation='vertical')
+colorbar.ax.yaxis.label.set_fontsize(16)
+plt.xlabel(r'$\cos{\Theta}$', fontsize=16)   
+plt.ylabel(r'$M_{ZZ} (GeV)$', fontsize=16)
 
 # Add the value of the concurrence bound as a label to each square
 num_rows, num_cols = concurrence_grid.shape
 x_centers = np.linspace(0.1, 0.9, num_cols)  # Center of bins for cos_psi
-y_centers = np.linspace(250, 950, num_rows)  # Center of bins for M_ZZ
+y_centers = np.concatenate((np.array([225.0, 275.0]), np.arange(350.0, 1050.0, step=100.0)))  # Center of bins for M_ZZ
 for i, y in enumerate(y_centers):
     for j, x in enumerate(x_centers):
-        plt.text(x, y, f"{concurrence_grid[i, j]:.2f}", color="white", ha="center", va="center", fontsize=6)
+        plt.text(x, y, f"{concurrence_grid[i, j]:.2f}", color="white", ha="center", va="center", fontsize=9)
 
-# Save the 2D heatmap of concurrence values
 heatmap_filename = os.path.join(ZZ_path, "concurrence_heatmap_ZZ_new.pdf")
 plt.savefig(heatmap_filename)
