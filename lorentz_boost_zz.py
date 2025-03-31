@@ -320,7 +320,7 @@ def main():
     theta1_list = []
     theta3_list = []
     for i in range(len(particle_arrays['e+'])):
-        if (i % 100000 == 0):
+        if (i % 10000 == 0):
             print(f"Processing event {i}")
         phi1, phi3, theta1, theta3 = phistar(particle_arrays['e+'][i], particle_arrays['e-'][i], particle_arrays['mu+'][i], particle_arrays['mu-'][i])
         phi1_list.append(phi1)

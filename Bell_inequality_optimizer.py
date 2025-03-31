@@ -11,13 +11,9 @@ def inequality_function(density_matrix, O_bell_prime, parameters):
 
         O_bell = U_cross_V.conj().T @ O_bell_prime @ U_cross_V
         bell_inequality = np.trace(density_matrix @ O_bell)
-        return bell_inequality.real()
+        return bell_inequality
 
-def bell_inequality_optimization(density_matrix, O_bell_prime):
-    """
-    Perform the optimization procedure to maximize the Bell inequality.
-    """
-    def inequality_function_pseudo(parameters):
+def inequality_function_pseudo(parameters, density_matrix, O_bell_prime):
         U_params = parameters[:8]
         V_params = parameters[8:]
         U = euler_unitary_matrix(*U_params)
@@ -27,9 +23,15 @@ def bell_inequality_optimization(density_matrix, O_bell_prime):
         O_bell = U_cross_V.conj().T @ O_bell_prime @ U_cross_V
         bell_inequality = np.trace(density_matrix @ O_bell)
         return - np.real(bell_inequality)
-    
+
+def bell_inequality_optimization(density_matrix, O_bell_prime):
+    """
+    Perform the optimization procedure to maximize the Bell inequality.
+    """
     bounds = [(0, 2 * np.pi)] * 16  # Define bounds for the parameters
-    result = differential_evolution(inequality_function_pseudo, bounds)
+
+    # Enable parallelization by setting workers=-1 in differential_evolution
+    result = differential_evolution(inequality_function_pseudo, bounds, args=(density_matrix, O_bell_prime), workers=-1)
     optimal_params = result.x
     bell_value = - result.fun
 

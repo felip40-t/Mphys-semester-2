@@ -12,10 +12,9 @@ fortran_dummy_fct = os.path.join(process_dir, "SubProcesses", "dummy_fct.f")
 # Define regions of phase space for (0.0 to 1.0) and (200.0 to 1000.0)
 regions = [
     [(cos_min, cos_min + 0.1), (mass_min, mass_min + 50.0)]
-    for cos_min in [0.0 + 0.1 * i for i in range(8)]
-    for mass_min in [300.0 + 50.0 * j for j in range(14)]
+    for cos_min in [0.0 + 0.1 * i for i in range(9)]
+    for mass_min in [200.0 + 50.0 * j for j in range(16)]
 ]
-
 
 # Function to modify Fortran file
 def modify_fortran_file(file_path, limits):
