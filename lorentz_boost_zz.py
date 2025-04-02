@@ -293,9 +293,6 @@ def phistar(v1, v2, v3, v4):
 
 # Main function for processing data and calculating the Lorentz boost and angles
 def main():
-    # Find the latest run directory and run number
-    # _, run_number = find_latest_run_dir(base_dir)
-    #run_number = 29
 
     # Read the four-momenta data for all particles in the process
     particle_arrays = {particle_name: read_data(os.path.join(directory, f"combined_data_temp.txt"))
@@ -308,7 +305,14 @@ def main():
     z1_array = particle_arrays['e+'] + particle_arrays['e-']
 
     # Calculate scattering angle of boosted z1 with beam axis
-    z1_boosted = execute_boost(z1_array, diboson_array)
+    z1_boosted_list = []
+    for i in range(len(z1_array)):
+        z1_boosted = np.zeros(4)
+        boostinvp(z1_array[i], diboson_array[i], z1_boosted)
+        z1_boosted_list.append(z1_boosted)
+        if (i % 100000 == 0):
+            print(f"Boosting Z event {i}")
+    z1_boosted = np.array(z1_boosted_list)
     cos_psi = np.array([calc_scattering_angle(z1_boosted[i]) for i in range(len(z1_boosted))])
     # Save cos(psi) data to file
     file_path_psi = os.path.join(process_dir, f"Plots and data/psi_data_combined_temp.txt")
@@ -320,7 +324,7 @@ def main():
     theta1_list = []
     theta3_list = []
     for i in range(len(particle_arrays['e+'])):
-        if (i % 10000 == 0):
+        if (i % 100000 == 0):
             print(f"Processing event {i}")
         phi1, phi3, theta1, theta3 = phistar(particle_arrays['e+'][i], particle_arrays['e-'][i], particle_arrays['mu+'][i], particle_arrays['mu-'][i])
         phi1_list.append(phi1)

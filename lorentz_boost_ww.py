@@ -222,7 +222,7 @@ def main():
 
     # Calculate diboson invariant mass
     WW_inv_mass = np.apply_along_axis(calc_inv_mass, 1, diboson_array)
-    file_path_inv_mass = os.path.join(process_dir, f"Plots and data/WW_inv_mass_{run_number}.txt")
+    file_path_inv_mass = os.path.join(process_dir, f"Plots and data/WW_inv_mass_combined_temp.txt")
     np.savetxt(file_path_inv_mass, WW_inv_mass)
 
     # Calculate decay angles for each event

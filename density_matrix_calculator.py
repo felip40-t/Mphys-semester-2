@@ -101,6 +101,6 @@ def error_propagation_bell(O_bell, uncertainty_matrix_real, uncertainty_matrix_i
     real_variance = np.trace(uncertainty_matrix_real**2 @ O_bell_real**2)
     imag_variance = np.trace(uncertainty_matrix_imag**2 @ O_bell_imag**2)
     variance = real_variance + imag_variance
-    uncertainty = np.sqrt(variance)
+    uncertainty = np.real(np.sqrt(variance))
     return uncertainty
             

@@ -1,9 +1,11 @@
+from multiprocessing import process
 import os
 import subprocess
 import pylhe
 import numpy as np
 from coefficient_calculator_ZZ import read_masked_data
 import glob
+from lorentz_boost_zz import boostinvp, calc_inv_mass, calc_scattering_angle, phistar
 
 
 def run_madgraph(mg5_install_dir, process_dir, energy, nevents):
@@ -40,7 +42,7 @@ def find_latest_run_dir(base_dir):
     """
     Efficiently find the latest 'run_*' directory.
     """
-    run_dirs = glob(os.path.join(base_dir, 'run_*'))
+    run_dirs = glob.glob(os.path.join(base_dir, 'run_*'))
     
     if not run_dirs:
         raise FileNotFoundError("No run directories found.")
@@ -82,43 +84,65 @@ def read_lhe_write_data(lhe_file_path, particle_directories, number):
     for f in file_handles.values():
         f.close()
 
-
-def process_and_combine_runs(base_dir, particle_directories, run_number_start, run_number_end):
+def process_and_combine_runs(base_dir, particle_directories, run_number_start, run_number_end, batch_size=250000):
     """
-    Process multiple runs by reading their LHE files and combine data directly into combined_data_temp.
+    Process multiple runs by reading their LHE files and combine data directly into combined_data_temp
+    without keeping all data in memory at once. Data is written incrementally to avoid memory exhaustion.
+    
+    Parameters:
+    - base_dir: The base directory containing run directories.
+    - particle_directories: A dictionary where keys are particle IDs and values are directories for storing combined data.
+    - run_number_start: The starting run number.
+    - run_number_end: The ending run number.
+    - batch_size: The number of events to accumulate in memory before writing to disk.
     """
-    combined_data = {particle_id: [] for particle_id in particle_directories.keys()}
-
-    for number in range(run_number_start, run_number_end + 1):
-        run_dir = os.path.join(base_dir, f"run_{number}")
-        print(f"Processing run directory: {run_dir}")
-
-        # Locate LHE file in the run directory
-        lhe_file = glob(os.path.join(run_dir, "*.lhe.gz"))
-        if not lhe_file:
-            raise FileNotFoundError(f"No LHE file found in the run directory: {run_dir}")
-        
-        lhe_file_path = lhe_file[0]
-        print(f"Found LHE file: {lhe_file_path}")
-
-        # Read LHE file and append data to combined_data
-        init_info = pylhe.read_lhe_init(lhe_file_path)
-        cross_section = init_info['procInfo'][0]['xSection']
-
-        for event in pylhe.read_lhe_with_attributes(lhe_file_path):
-            for particle in event.particles:
-                if particle.status == 1:  # final state particle
-                    particle_id = particle.id
-                    if particle_id in combined_data:
-                        data_line = [particle.e, particle.px, particle.py, particle.pz]
-                        combined_data[particle_id].append(data_line)
-
-    # Write combined data to combined_data_temp.txt
+    # Make sure output directories exist and open files for each particle
+    output_files = {}
     for particle_id, directory in particle_directories.items():
         os.makedirs(directory, exist_ok=True)
-        combined_data_array = np.array(combined_data[particle_id])
         combined_data_file = os.path.join(directory, "combined_data_temp.txt")
-        np.savetxt(combined_data_file, combined_data_array, delimiter=',')
+        # Open file in append mode
+        output_files[particle_id] = open(combined_data_file, 'a')
+
+    try:
+        for number in range(run_number_start, run_number_end + 1):
+            run_dir = os.path.join(base_dir, f"run_{number}")
+            print(f"Processing run directory: {run_dir}")
+
+            # Locate LHE file in the run directory
+            lhe_file = glob.glob(os.path.join(run_dir, "*.lhe.gz"))
+            if not lhe_file:
+                raise FileNotFoundError(f"No LHE file found in the run directory: {run_dir}")
+            
+            lhe_file_path = lhe_file[0]
+            print(f"Found LHE file: {lhe_file_path}")
+
+            # Read events in batches and write to disk incrementally
+            event_buffer = {particle_id: [] for particle_id in particle_directories.keys()}
+
+            for event in pylhe.read_lhe_with_attributes(lhe_file_path):
+                for particle in event.particles:
+                    if particle.status == 1:  # final state particle
+                        particle_id = particle.id
+                        if particle_id in event_buffer:
+                            data_line = [particle.e, particle.px, particle.py, particle.pz]
+                            event_buffer[particle_id].append(data_line)
+
+                            # Write in batches
+                            if len(event_buffer[particle_id]) >= batch_size:
+                                np.savetxt(output_files[particle_id], event_buffer[particle_id], delimiter=',')
+                                event_buffer[particle_id] = []  # Clear buffer
+
+            # Write any remaining data in the buffer (less than batch_size)
+            for particle_id in event_buffer:
+                if event_buffer[particle_id]:
+                    np.savetxt(output_files[particle_id], event_buffer[particle_id], delimiter=',')
+                    event_buffer[particle_id] = []
+
+    finally:
+        # Close all output files
+        for f in output_files.values():
+            f.close()
 
 def add_data(particle_directories):
     """
@@ -135,7 +159,7 @@ def add_data(particle_directories):
 
 def add_phase_points(directory):
     """
-    Add phase points from run_number to combined data (ZZ_inv_mass_combined.txt and psi_data_combined.txt).
+    Add phase points to combined data (ZZ_inv_mass_combined.txt and psi_data_combined.txt).
     """
     # Paths to the new data files
     cos_psi_file = os.path.join(directory, f"psi_data_combined_temp.txt")
@@ -221,11 +245,149 @@ def filter_data(particle_directories, directory):
             if os.path.exists(file_path):
                 np.savetxt(file_path, np.loadtxt(file_path)[~mask])
 
+def reorganise_data(particle_directories, directory):
+    """
+    Check invariant mass and scattering angle and reorganise events.
+    """
+    regions = [
+        [(cos_min, cos_min + 0.1), (mass_min, mass_min + 50.0)]
+        for cos_min in [0.0 + 0.1 * i for i in range(9)]
+        for mass_min in [200.0 + 50.0 * j for j in range(16)]
+    ]
+
+    # regions += [
+    #     [(0.9, 0.95), (mass_min, mass_min + 100.0)]
+    #     for mass_min in [200.0 + 100.0 * j for j in range(8)]
+    # ]
+
+    reorganised_path = os.path.join(directory, "reorganised_data")
+    # Define file paths
+    combined_cos_psi_file = os.path.join(directory, "psi_data_combined_new.txt")
+    combined_inv_mass_file = os.path.join(directory, "ZZ_inv_mass_combined_new.txt")
+
+    # Load data once
+    cos_psi_data = np.loadtxt(combined_cos_psi_file)
+    inv_mass_data = np.loadtxt(combined_inv_mass_file)
+
+    for region in regions:
+        print("Processing region:", region)
+        new_path = os.path.join(reorganised_path, f"cos_psi_{region[0][0]}_{region[0][1]}_inv_mass_{region[1][0]}_{region[1][1]}")
+        os.makedirs(new_path, exist_ok=True)
+
+        # Generate mask
+        mask = read_masked_data(cos_psi_data, inv_mass_data, region[0], region[1])
+        print("Size of region:", np.sum(mask))
+        # Save filtered data
+        filtered_cos_psi_data = cos_psi_data[mask]
+        filtered_inv_mass_data = inv_mass_data[mask]
+        np.savetxt(os.path.join(new_path, "psi_data_combined_new.txt"), filtered_cos_psi_data)
+        np.savetxt(os.path.join(new_path, "ZZ_inv_mass_combined_new.txt"), filtered_inv_mass_data)
+
+        # Process particle-specific files
+        for particle_id, particle_directory in particle_directories.items():
+            
+            # Process theta and phi files
+            for file_name in ["theta_data_combined_new.txt", "phi_data_combined_new.txt"]:
+                file_path = os.path.join(particle_directory, file_name)
+                if os.path.exists(file_path):
+                    if particle_id == -11:
+                        # Filter data for e+
+                        filtered_data = np.loadtxt(file_path)[mask]
+                        new_file_path = os.path.join(new_path, f"e+_{file_name}")
+                        np.savetxt(new_file_path, filtered_data)
+                    elif particle_id == -13:
+                        # Filter data for mu+
+                        filtered_data = np.loadtxt(file_path)[mask]
+                        new_file_path = os.path.join(new_path, f"mu+_{file_name}")
+                        np.savetxt(new_file_path, filtered_data)
+                
+
+def read_boost_data(Events_dir, reorganised_path):
+    """
+    Function to read data from lhe files, boost them, calculate decay angles, and save them to the correct region as in reorganise_data.
+    """
+    # Define order of regions
+    regions = [
+        [(cos_min, cos_min + 0.1), (mass_min, mass_min + 50.0)]
+        for cos_min in [0.0 + 0.1 * i for i in range(9)]
+        for mass_min in [200.0 + 50.0 * j for j in range(16)]
+    ]
+
+    run_start = 2
+
+    for i,region in enumerate(regions):
+
+        run_directory = os.path.join(Events_dir, f"run_{run_start + i}")
+        save_dir = os.path.join(reorganised_path, f"cos_psi_{region[0][0]}_{region[0][1]}_inv_mass_{region[1][0]}_{region[1][1]}")
+
+        cos_psi_data = []
+        inv_mass_data = []
+        ep_theta_data = []
+        ep_phi_data = []
+        mp_theta_data = []
+        mp_phi_data = []
+
+        # Read lhe file
+        lhe_file = glob.glob(os.path.join(run_directory, "*.lhe.gz"))
+        if not lhe_file:
+            raise FileNotFoundError(f"No LHE file found in the run directory: {run_directory}")
+        lhe_file_path = lhe_file[0]
+        print(f"Found LHE file: {lhe_file_path}")
+        lhe_data = pylhe.read_lhe_with_attributes(lhe_file_path)
+
+        # Read data
+        for event in lhe_data:
+            # dict to store data
+            particle_data = {
+                11: [],
+                -11: [],
+                13: [],
+                -13: []
+            }
+            # Read particles
+            for particle in event.particles:
+                if particle.status == 1:
+                    particle_data[particle.id].append([particle.e, particle.px, particle.py, particle.pz])
+            
+            # Reconstruct diboson frame
+            diboson = particle_data[-11] + particle_data[11] + particle_data[-13] + particle_data[13]
+            # Reconstruct first z
+            z1 = particle_data[-11] + particle_data[11]
+            z1_boosted = np.zeros(4)
+            # Boost z into diboson CM frame
+            boostinvp(z1, diboson, z1_boosted)
+            cos_psi = calc_scattering_angle(z1_boosted)
+            cos_psi_data.append(cos_psi)
+            inv_mass = calc_inv_mass(diboson)
+            inv_mass_data.append(inv_mass)
+            # Calculate decay angles
+            ep_phi, mp_phi, ep_theta, mp_theta = phistar(particle_data[11], particle_data[-11], particle_data[13], particle_data[-13])
+            ep_phi_data.append(ep_phi)
+            mp_phi_data.append(mp_phi)
+            ep_theta_data.append(ep_theta)
+            mp_theta_data.append(mp_theta)
+
+        # Append decay angle data to files
+        with open(os.path.join(save_dir, "e+_phi_data_combined_new.txt"), 'a') as f:
+            np.savetxt(f, ep_phi_data)
+        with open(os.path.join(save_dir, "mu+_phi_data_combined_new.txt"), 'a') as f:
+            np.savetxt(f, mp_phi_data)
+        with open(os.path.join(save_dir, "e+_theta_data_combined_new.txt"), 'a') as f:
+            np.savetxt(f, ep_theta_data)
+        with open(os.path.join(save_dir, "mu+_theta_data_combined_new.txt"), 'a') as f:
+            np.savetxt(f, mp_theta_data)
+        with open(os.path.join(save_dir, "psi_data_combined_new.txt"), 'a') as f:
+            np.savetxt(f, cos_psi_data)
+        with open(os.path.join(save_dir, "ZZ_inv_mass_combined_new.txt"), 'a') as f:
+            np.savetxt(f, inv_mass_data)
+
+
 
 def main():
     mg5_install_dir = "/home/felipetcach/project/MG5_aMC_v3_5_6"
     process_dir = os.path.join(mg5_install_dir, "pp_ZZ_SM")
-    base_dir = os.path.join(process_dir, "Events")
+    new_data_dir = os.path.join(mg5_install_dir, "Felipe_pp_ZZ_4l.tar.gz/Felipe_pp_ZZ_4l/Events")
+    # base_dir = os.path.join(process_dir, "Events")
     
     particle_directories = {
         13: os.path.join(process_dir, "Plots and data/mu-"),  # mu-
@@ -240,10 +402,12 @@ def main():
     # Run MadGraph and process data
     # run_madgraph(mg5_install_dir, process_dir, ENERGY, NEVENTS)
     # process_last_run(base_dir, particle_directories)
-    process_and_combine_runs(base_dir, particle_directories, 309, 452)
+    # process_and_combine_runs(base_dir, particle_directories, 309, 452)
     # add_phase_points(os.path.join(process_dir, "Plots and data"))
     # add_angles(particle_directories)
     # filter_data(particle_directories, os.path.join(process_dir, "Plots and data"))
+    # reorganise_data(particle_directories, os.path.join(process_dir, "Plots and data"))
+    
 
 
 if __name__ == "__main__":
