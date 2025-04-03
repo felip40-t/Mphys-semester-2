@@ -1,11 +1,13 @@
 from multiprocessing import process
 import os
 import subprocess
+import sys
 import pylhe
 import numpy as np
 from coefficient_calculator_ZZ import read_masked_data
 import glob
 from lorentz_boost_zz import boostinvp, calc_inv_mass, calc_scattering_angle, phistar
+import tarfile
 
 
 def run_madgraph(mg5_install_dir, process_dir, energy, nevents):
@@ -315,78 +317,129 @@ def read_boost_data(Events_dir, reorganised_path):
 
     run_start = 2
 
-    for i,region in enumerate(regions):
-
-        run_directory = os.path.join(Events_dir, f"run_{run_start + i}")
+    for i, region in enumerate(regions):
+        print("Processing region:", region)
+        run_directory = os.path.join(Events_dir, f"run_{(run_start + i):02d}")
+        # Check that the run directory exists
+        if not os.path.exists(run_directory):
+            print(f"Error: Run directory {run_directory} does not exist. Skipping.")
+            continue
+        else:
+            print(f"Run directory {run_directory} exists. Proceeding with processing.")
+        # Create the save directory for the current region
         save_dir = os.path.join(reorganised_path, f"cos_psi_{region[0][0]}_{region[0][1]}_inv_mass_{region[1][0]}_{region[1][1]}")
+        
+        # Check that the save directory exists
+        if not os.path.exists(save_dir):
+            print(f"Error: Save directory {save_dir} does not exist. Skipping run directory {run_directory}.")
+            continue
+        else:
+            print(f"Save directory {save_dir} exists. Proceeding with processing.")
 
-        cos_psi_data = []
-        inv_mass_data = []
-        ep_theta_data = []
-        ep_phi_data = []
-        mp_theta_data = []
-        mp_phi_data = []
+        # Initialize numpy arrays for data
+        cos_psi_data = np.array([])
+        inv_mass_data = np.array([])
+        ep_theta_data = np.array([])
+        ep_phi_data = np.array([])
+        mp_theta_data = np.array([])
+        mp_phi_data = np.array([])
 
         # Read lhe file
-        lhe_file = glob.glob(os.path.join(run_directory, "*.lhe.gz"))
-        if not lhe_file:
-            raise FileNotFoundError(f"No LHE file found in the run directory: {run_directory}")
-        lhe_file_path = lhe_file[0]
-        print(f"Found LHE file: {lhe_file_path}")
-        lhe_data = pylhe.read_lhe_with_attributes(lhe_file_path)
+        try:
+            lhe_file = glob.glob(os.path.join(run_directory, "*.lhe.gz"))
+            if not lhe_file:
+                raise FileNotFoundError(f"No LHE file found in the run directory: {run_directory}")
+            lhe_file_path = lhe_file[0]
+            print(f"Found LHE file: {lhe_file_path}")
+        except Exception as e:
+            print(f"Error locating LHE file: {e}")
+            continue
 
-        # Read data
-        for event in lhe_data:
-            # dict to store data
-            particle_data = {
-                11: [],
-                -11: [],
-                13: [],
-                -13: []
-            }
-            # Read particles
-            for particle in event.particles:
-                if particle.status == 1:
-                    particle_data[particle.id].append([particle.e, particle.px, particle.py, particle.pz])
+        try:
+            lhe_data = pylhe.read_lhe_with_attributes(lhe_file_path)
+        except Exception as e:
+            print(f"Error reading LHE file {lhe_file_path}: {e}")
+            continue
+
+        # Process events
+        try:
+            for event in lhe_data:
+                # dict to store data
+                particle_data = {
+                    11: [],
+                    -11: [],
+                    13: [],
+                    -13: []
+                }
+                # Read particles
+                for particle in event.particles:
+                    if particle.status == 1:
+                        particle_data[particle.id].append(particle.e)
+                        particle_data[particle.id].append(particle.px)
+                        particle_data[particle.id].append(particle.py)
+                        particle_data[particle.id].append(particle.pz)
+                # Reconstruct diboson frame and first z
+                diboson = diboson = np.array(particle_data[-11]) + np.array(particle_data[11]) + np.array(particle_data[-13]) + np.array(particle_data[13])
+                z1 = np.array(particle_data[-11]) + np.array(particle_data[11])
+                z1_boosted = np.zeros(4)
+                # Boost z into diboson CM frame
+                boostinvp(z1, diboson, z1_boosted)
+                cos_psi = calc_scattering_angle(np.array(z1_boosted))
+                cos_psi_data = np.append(cos_psi_data, cos_psi)
+                inv_mass = calc_inv_mass(np.array(diboson))
+                inv_mass_data = np.append(inv_mass_data, inv_mass)
+                # Calculate decay angles
+                ep_phi, mp_phi, ep_theta, mp_theta = phistar(np.array(particle_data[11]), np.array(particle_data[-11]), np.array(particle_data[13]), np.array(particle_data[-13]))
+                ep_phi_data = np.append(ep_phi_data, ep_phi)
+                mp_phi_data = np.append(mp_phi_data, mp_phi)
+                ep_theta_data = np.append(ep_theta_data, ep_theta)
+                mp_theta_data = np.append(mp_theta_data, mp_theta)
+        except Exception as e:
+            import traceback
+            print(f"Error processing events in {lhe_file_path}: {e}")
+            print("Traceback:")
+            traceback.print_exc()
+            sys.exit(1)
             
-            # Reconstruct diboson frame
-            diboson = particle_data[-11] + particle_data[11] + particle_data[-13] + particle_data[13]
-            # Reconstruct first z
-            z1 = particle_data[-11] + particle_data[11]
-            z1_boosted = np.zeros(4)
-            # Boost z into diboson CM frame
-            boostinvp(z1, diboson, z1_boosted)
-            cos_psi = calc_scattering_angle(z1_boosted)
-            cos_psi_data.append(cos_psi)
-            inv_mass = calc_inv_mass(diboson)
-            inv_mass_data.append(inv_mass)
-            # Calculate decay angles
-            ep_phi, mp_phi, ep_theta, mp_theta = phistar(particle_data[11], particle_data[-11], particle_data[13], particle_data[-13])
-            ep_phi_data.append(ep_phi)
-            mp_phi_data.append(mp_phi)
-            ep_theta_data.append(ep_theta)
-            mp_theta_data.append(mp_theta)
 
-        # Append decay angle data to files
-        with open(os.path.join(save_dir, "e+_phi_data_combined_new.txt"), 'a') as f:
-            np.savetxt(f, ep_phi_data)
-        with open(os.path.join(save_dir, "mu+_phi_data_combined_new.txt"), 'a') as f:
-            np.savetxt(f, mp_phi_data)
-        with open(os.path.join(save_dir, "e+_theta_data_combined_new.txt"), 'a') as f:
-            np.savetxt(f, ep_theta_data)
-        with open(os.path.join(save_dir, "mu+_theta_data_combined_new.txt"), 'a') as f:
-            np.savetxt(f, mp_theta_data)
-        with open(os.path.join(save_dir, "psi_data_combined_new.txt"), 'a') as f:
-            np.savetxt(f, cos_psi_data)
-        with open(os.path.join(save_dir, "ZZ_inv_mass_combined_new.txt"), 'a') as f:
-            np.savetxt(f, inv_mass_data)
-
+        # Append decay angle data to files with error handling
+        try:
+            with open(os.path.join(save_dir, "e+_phi_data_combined_new.txt"), 'a') as f:
+                np.savetxt(f, ep_phi_data)
+            with open(os.path.join(save_dir, "mu+_phi_data_combined_new.txt"), 'a') as f:
+                np.savetxt(f, mp_phi_data)
+            with open(os.path.join(save_dir, "e+_theta_data_combined_new.txt"), 'a') as f:
+                np.savetxt(f, ep_theta_data)
+            with open(os.path.join(save_dir, "mu+_theta_data_combined_new.txt"), 'a') as f:
+                np.savetxt(f, mp_theta_data)
+            with open(os.path.join(save_dir, "psi_data_combined_new.txt"), 'a') as f:
+                np.savetxt(f, cos_psi_data)
+            with open(os.path.join(save_dir, "ZZ_inv_mass_combined_new.txt"), 'a') as f:
+                np.savetxt(f, inv_mass_data)
+        except Exception as e:
+            print(f"Error writing output files in directory {save_dir}: {e}")
 
 
 def main():
     mg5_install_dir = "/home/felipetcach/project/MG5_aMC_v3_5_6"
     process_dir = os.path.join(mg5_install_dir, "pp_ZZ_SM")
-    new_data_dir = os.path.join(mg5_install_dir, "Felipe_pp_ZZ_4l.tar.gz/Felipe_pp_ZZ_4l/Events")
+    # Open the tar file without extracting all files
+
+    # "\\wsl.localhost\Ubuntu\home\felipetcach\project\MG5_aMC_v3_5_6\Felipe_pp_ZZ_4l.tar.gz"
+
+    tar_path = os.path.join(mg5_install_dir, "Felipe_pp_ZZ_4l.tar.gz")
+    with tarfile.open(tar_path, "r") as tar:
+        # Extract only the Events directory to a temporary location
+        temp_dir = "/tmp/Felipe_pp_ZZ_4l_Events"
+        if not os.path.exists(temp_dir):
+            os.makedirs(temp_dir)
+        members = [member for member in tar.getmembers() if member.name.startswith("Felipe_pp_ZZ_4l/Events")]
+        total_members = len(members)
+        for i, member in enumerate(members, start=1):
+            tar.extract(member, path=temp_dir)
+            print(f"Extracting {i}/{total_members}: {member.name}")
+
+    new_data_dir = os.path.join(temp_dir, "Felipe_pp_ZZ_4l/Events")
     # base_dir = os.path.join(process_dir, "Events")
     
     particle_directories = {
@@ -407,7 +460,7 @@ def main():
     # add_angles(particle_directories)
     # filter_data(particle_directories, os.path.join(process_dir, "Plots and data"))
     # reorganise_data(particle_directories, os.path.join(process_dir, "Plots and data"))
-    
+    read_boost_data(new_data_dir, os.path.join(process_dir, "Plots and data/reorganised_data"))
 
 
 if __name__ == "__main__":
