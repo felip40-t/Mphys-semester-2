@@ -47,22 +47,22 @@ def concurrence_lower(density_matrix, uncertainty_matrix_real, uncertainty_matri
     Calculate the lower bound of the concurrence of a bipartite qutrit state.
     """
     rho_A = partial_trace(density_matrix, 1)
-    rho_A_var = partial_trace(uncertainty_matrix_real**2, 1) + partial_trace(uncertainty_matrix_imag**2, 1)
+    # rho_A_var = partial_trace(uncertainty_matrix_real**2, 1) + partial_trace(uncertainty_matrix_imag**2, 1)
     rho_B = partial_trace(density_matrix, 2)
-    rho_B_var = partial_trace(uncertainty_matrix_real**2, 2) + partial_trace(uncertainty_matrix_imag**2, 2)
+    # rho_B_var = partial_trace(uncertainty_matrix_real**2, 2) + partial_trace(uncertainty_matrix_imag**2, 2)
     purity_A = np.real(purity(rho_A))
-    purity_A_var = 4 * sum(np.abs(rho_A[i,j])**2 * rho_A_var[i,j] for i in range(3) for j in range(3))
+    # purity_A_var = 4 * sum(np.abs(rho_A[i,j])**2 * rho_A_var[i,j] for i in range(3) for j in range(3))
     purity_B = np.real(purity(rho_B))
-    purity_B_var = 4 * sum(np.abs(rho_B[i,j])**2 * rho_B_var[i,j] for i in range(3) for j in range(3))
+    # purity_B_var = 4 * sum(np.abs(rho_B[i,j])**2 * rho_B_var[i,j] for i in range(3) for j in range(3))
     total_purity = np.real(purity(density_matrix))
-    total_purity_var = 4 * sum(np.abs(density_matrix[i,j])**2 * (uncertainty_matrix_real[i,j]**2 + uncertainty_matrix_imag[i,j]**2) for i in range(9) for j in range(9))
+    #mtotal_purity_var = 4 * sum(np.abs(density_matrix[i,j])**2 * (uncertainty_matrix_real[i,j]**2 + uncertainty_matrix_imag[i,j]**2) for i in range(9) for j in range(9))
     conc_lb = 2 * max(0, total_purity - purity_A, total_purity - purity_B)
     if (conc_lb == 0):
-        return 0,0
+        return 0 #,0
     elif (conc_lb == 2 * (total_purity - purity_A)):
-        return conc_lb, np.sqrt(total_purity_var + purity_A_var)
+        return conc_lb #, np.sqrt(total_purity_var + purity_A_var)
     elif (conc_lb == 2 * (total_purity - purity_B)):
-        return conc_lb, np.sqrt(total_purity_var + purity_B_var)
+        return conc_lb #, np.sqrt(total_purity_var + purity_B_var)
 
 
 def concurrence_upper(density_matrix):

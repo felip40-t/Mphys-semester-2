@@ -379,7 +379,7 @@ def read_boost_data(Events_dir, reorganised_path):
                         particle_data[particle.id].append(particle.py)
                         particle_data[particle.id].append(particle.pz)
                 # Reconstruct diboson frame and first z
-                diboson = diboson = np.array(particle_data[-11]) + np.array(particle_data[11]) + np.array(particle_data[-13]) + np.array(particle_data[13])
+                diboson = np.array(particle_data[-11]) + np.array(particle_data[11]) + np.array(particle_data[-13]) + np.array(particle_data[13])
                 z1 = np.array(particle_data[-11]) + np.array(particle_data[11])
                 z1_boosted = np.zeros(4)
                 # Boost z into diboson CM frame
@@ -389,7 +389,7 @@ def read_boost_data(Events_dir, reorganised_path):
                 inv_mass = calc_inv_mass(np.array(diboson))
                 inv_mass_data = np.append(inv_mass_data, inv_mass)
                 # Calculate decay angles
-                ep_phi, mp_phi, ep_theta, mp_theta = phistar(np.array(particle_data[11]), np.array(particle_data[-11]), np.array(particle_data[13]), np.array(particle_data[-13]))
+                ep_phi, mp_phi, ep_theta, mp_theta = phistar(np.array(particle_data[-11]), np.array(particle_data[11]), np.array(particle_data[-13]), np.array(particle_data[13]))
                 ep_phi_data = np.append(ep_phi_data, ep_phi)
                 mp_phi_data = np.append(mp_phi_data, mp_phi)
                 ep_theta_data = np.append(ep_theta_data, ep_theta)
