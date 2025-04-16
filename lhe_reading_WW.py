@@ -1,10 +1,14 @@
 import os 
 import sys
 import subprocess
+import trace
 import pylhe
 import numpy as np
 from lorentz_boost_zz import boostinvp, calc_inv_mass, calc_scattering_angle, phistar
 import glob
+from multiprocessing import Pool
+import traceback
+import logging
 
 def run_madgraph(mg5_install_dir, process_dir, energy, nevents):
     """
@@ -184,7 +188,6 @@ def add_angles(particle_directories, run_number):
 
 
 
-
 def read_boost_data(Events_dir, reorganised_path):
     """
     Function to read data from lhe files, boost them, calculate decay angles, and save them to the correct region as in organised_data.
@@ -205,8 +208,6 @@ def read_boost_data(Events_dir, reorganised_path):
         if not os.path.exists(run_directory):
             print(f"Error: Run directory {run_directory} does not exist. Skipping.")
             continue
-        else:
-            print(f"Run directory {run_directory} exists. Proceeding with processing.")
         # Create the save directory for the current region
         save_dir = os.path.join(reorganised_path, f"cos_psi_{region[0][0]}_{region[0][1]}_inv_mass_{region[1][0]}_{region[1][1]}")
         os.makedirs(save_dir, exist_ok=True)
@@ -215,8 +216,6 @@ def read_boost_data(Events_dir, reorganised_path):
         if not os.path.exists(save_dir):
             print(f"Error: Save directory {save_dir} does not exist. Skipping run directory {run_directory}.")
             continue
-        else:
-            print(f"Save directory {save_dir} exists. Proceeding with processing.")
 
         # Initialize numpy arrays for data
         cos_psi_data = np.array([])
@@ -301,22 +300,184 @@ def read_boost_data(Events_dir, reorganised_path):
         except Exception as e:
             print(f"Error writing output files in directory {save_dir}: {e}")
 
+def change_filename(reorganised_path):
+    """
+    Change the filename of the combined data files to remove the "_combined" suffix and change ZZ to WW.
+    """
+    regions = [
+        [(cos_min, cos_min + 0.1), (mass_min, mass_min + 50.0)]
+        for cos_min in [0.0 + 0.1 * i for i in range(9)]
+        for mass_min in [200.0 + 50.0 * j for j in range(20)]
+    ]
+    for region in regions:
+        print("Changing filenames for region:", region)
+        save_dir = os.path.join(reorganised_path, f"cos_psi_{region[0][0]}_{region[0][1]}_inv_mass_{region[1][0]}_{region[1][1]}")
+        # Check that the save directory exists
+        if not os.path.exists(save_dir):
+            print(f"Error: Save directory {save_dir} does not exist. Skipping.")
+            continue
+        # Rename files
+        try:
+            for file in ["e+_phi_data_combined.txt", "mu-_phi_data_combined.txt", "e+_theta_data_combined.txt", "mu-_theta_data_combined.txt", "psi_data_combined.txt", "ZZ_inv_mass_combined.txt"]:
+                old_file_path = os.path.join(save_dir, file)
+                new_file_path = os.path.join(save_dir, file.replace("_combined", ""))
+                os.rename(old_file_path, new_file_path)
+            old_file_path = os.path.join(save_dir, "ZZ_inv_mass.txt")
+            new_file_path = os.path.join(save_dir, "WW_inv_mass.txt")
+            os.rename(old_file_path, new_file_path)
+        except Exception as e:
+            print(f"Error renaming files in directory {save_dir}: {e}")
+
+def add_regions(reorganised_path, events_dir):
+    # Define order of regions
+    regions = [
+        [(cos_min, cos_min + 0.1), (mass_min, mass_min + 50.0)]
+        for cos_min in [0.0 + 0.1 * i for i in range(9)]
+        for mass_min in [200.0 + 50.0 * j for j in range(20)]
+    ]
+
+    new_regions = [regions[176], regions[98], regions[178]]
+
+    run_start = 4
+
+    for i, region in enumerate(new_regions):
+        print("Processing region:", region)
+        run_directory = os.path.join(events_dir, f"run_{(run_start + i):02d}")
+        # Check that the run directory exists
+        if not os.path.exists(run_directory):
+            print(f"Error: Run directory {run_directory} does not exist. Skipping.")
+            continue
+        # Create the save directory for the current region
+        save_dir = os.path.join(reorganised_path, f"cos_psi_{region[0][0]}_{region[0][1]}_inv_mass_{region[1][0]}_{region[1][1]}")
+        # Check that the save directory exists
+        if not os.path.exists(save_dir):
+            print(f"Error: Save directory {save_dir} does not exist.")
+            sys.exit(1)
+
+        # Initialize numpy arrays for data
+        cos_psi_data = np.array([])
+        inv_mass_data = np.array([])
+        ep_theta_data = np.array([])
+        ep_phi_data = np.array([])
+        mp_theta_data = np.array([])
+        mp_phi_data = np.array([])
+
+        # Read lhe file
+        try:
+            lhe_file = glob.glob(os.path.join(run_directory, "*.lhe.gz"))
+            if not lhe_file:
+                raise FileNotFoundError(f"No LHE file found in the run directory: {run_directory}")
+            lhe_file_path = lhe_file[0]
+            print(f"Found LHE file: {lhe_file_path}")
+        except Exception as e:
+            print(f"Error locating LHE file: {e}")
+            continue
+
+        try:
+            lhe_data = pylhe.read_lhe_with_attributes(lhe_file_path)
+        except Exception as e:
+            print(f"Error reading LHE file {lhe_file_path}: {e}")
+            continue
+
+        # Process events
+        try:
+            for event in lhe_data:
+                # dict to store data
+                particle_data = {
+                    -11: [],
+                    12: [],
+                    13: [],
+                    -14: []
+                }
+                # Read particles
+                for particle in event.particles:
+                    if particle.status == 1:
+                        particle_data[particle.id].append(particle.e)
+                        particle_data[particle.id].append(particle.px)
+                        particle_data[particle.id].append(particle.py)
+                        particle_data[particle.id].append(particle.pz)
+                # Reconstruct diboson frame and first w
+                diboson = np.array(particle_data[-11]) + np.array(particle_data[12]) + np.array(particle_data[13]) + np.array(particle_data[-14])
+                w1 = np.array(particle_data[-11]) + np.array(particle_data[12])
+                w1_boosted = np.zeros(4)
+                # Boost W into diboson CM frame
+                boostinvp(w1, diboson, w1_boosted)
+                cos_psi = calc_scattering_angle(np.array(w1_boosted))
+                cos_psi_data = np.append(cos_psi_data, cos_psi)
+                inv_mass = calc_inv_mass(np.array(diboson))
+                inv_mass_data = np.append(inv_mass_data, inv_mass)
+                # Calculate decay angles
+                ep_phi, mp_phi, ep_theta, mp_theta = phistar(np.array(particle_data[-11]), np.array(particle_data[12]), np.array(particle_data[13]), np.array(particle_data[-14]))
+                ep_phi_data = np.append(ep_phi_data, ep_phi)
+                mp_phi_data = np.append(mp_phi_data, mp_phi)
+                ep_theta_data = np.append(ep_theta_data, ep_theta)
+                mp_theta_data = np.append(mp_theta_data, mp_theta)
+        except Exception as e:
+            import traceback
+            print(f"Error processing events in {lhe_file_path}: {e}")
+            print("Traceback:")
+            traceback.print_exc()
+            sys.exit(1)
+            
+
+        # Append decay angle data to files with error handling
+        try:
+            with open(os.path.join(save_dir, "e+_phi_data.txt"), 'a') as f:
+                np.savetxt(f, ep_phi_data)
+            with open(os.path.join(save_dir, "mu-_phi_data.txt"), 'a') as f:
+                np.savetxt(f, mp_phi_data)
+            with open(os.path.join(save_dir, "e+_theta_data.txt"), 'a') as f:
+                np.savetxt(f, ep_theta_data)
+            with open(os.path.join(save_dir, "mu-_theta_data.txt"), 'a') as f:
+                np.savetxt(f, mp_theta_data)
+            with open(os.path.join(save_dir, "psi_data.txt"), 'a') as f:
+                np.savetxt(f, cos_psi_data)
+            with open(os.path.join(save_dir, "ZZ_inv_mass.txt"), 'a') as f:
+                np.savetxt(f, inv_mass_data)
+        except Exception as e:
+            print(f"Error writing output files in directory {save_dir}: {e}")
 
 
+def combine_files(reorganised_path):
+    """
+    Combine files with _combined suffix into existing files without the suffix.
+    """
+    regions = [
+        [(cos_min, cos_min + 0.1), (mass_min, mass_min + 50.0)]
+        for cos_min in [0.0 + 0.1 * i for i in range(9)]
+        for mass_min in [200.0 + 50.0 * j for j in range(20)]
+    ]
 
+    new_regions = [regions[176], regions[98], regions[178]]
 
-
+    for region in new_regions:
+        print("Combining files for region:", region)
+        save_dir = os.path.join(reorganised_path, f"cos_psi_{region[0][0]}_{region[0][1]}_inv_mass_{region[1][0]}_{region[1][1]}")
+        # Check that the save directory exists
+        if not os.path.exists(save_dir):
+            print(f"Error: Save directory {save_dir} does not exist. Skipping.")
+            continue
+        # delete files
+        try:
+            for file in ["e+_phi_data_combined.txt", "mu-_phi_data_combined.txt", "e+_theta_data_combined.txt", "mu-_theta_data_combined.txt", "psi_data_combined.txt", "ZZ_inv_mass_combined.txt", "ZZ_inv_mass.txt"]:
+                old_file_path = os.path.join(save_dir, file)
+                if os.path.exists(old_file_path):
+                    os.remove(old_file_path)
+        except Exception as e:
+            print(f"Error deleting files in directory {save_dir}: {e}")
 
 
 
 
 def main():
     mg5_install_dir = "/home/felipetcach/project/MG5_aMC_v3_5_6"
-    process_dir = os.path.join(mg5_install_dir, "pp_WW_4l_final_process")
-    events_dir = os.path.join(process_dir, "Events")
-    
-    read_boost_data(events_dir, os.path.join(process_dir, "Plots and data/organised_data"))
+    process_dir1 = os.path.join(mg5_install_dir, "Felipe_pp_WW_4l")
+    process_dir2 = os.path.join(mg5_install_dir, "pp_WW_4l_final_process")
+    events_dir = os.path.join(process_dir1, "Events")
+    save_dir = os.path.join(process_dir2, "Plots and data/organised_data")
 
+    combine_files(save_dir)
+    
 
 if __name__ == "__main__":
     main()

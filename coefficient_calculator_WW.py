@@ -14,8 +14,11 @@ def calculate_coefficients(theta_paths, phi_paths, mask=None):
     Calculate the A and C coefficients and return them as dictionaries.
     If a mask is provided, it will be applied to the data.
     """
-    theta_values = {1: np.arccos(read_data(theta_paths[1])), 3: np.arccos(read_data(theta_paths[3]))}
-    phi_values = {1: read_data(phi_paths[1]), 3: read_data(phi_paths[3])}
+    # theta_values = {1: read_data(theta_paths[1]), 3: read_data(theta_paths[3])}
+    # phi_values = {1: read_data(phi_paths[1]), 3: read_data(phi_paths[3])}
+
+    theta_values = theta_paths
+    phi_values = phi_paths
     
     # Apply mask if provided
     if mask is not None:
@@ -88,3 +91,101 @@ def read_masked_data(cos_psi_data, ZZ_inv_mass, psi_range, mass_range):
     Apply a mask based on psi and ZZ invariant mass.
     """
     return (cos_psi_data > psi_range[0]) & (cos_psi_data < psi_range[1]) & (ZZ_inv_mass > mass_range[0]) & (ZZ_inv_mass < mass_range[1])
+
+
+
+# Helper function to determine if it's plus or minus based on dataset value
+def plus_minus(dataset):
+    if dataset == 1:
+        return +1
+    elif dataset == 3:
+        return -1
+
+# Projector 1
+def projector_1(theta, phi, dataset):
+    value = np.sqrt(2) * np.sin(theta) * (5 * np.cos(theta) + plus_minus(dataset) * 1) * np.cos(phi)
+    return value
+
+# Projector 2
+def projector_2(theta, phi, dataset):
+    value = np.sqrt(2) * np.sin(theta) * (5 * np.cos(theta) + plus_minus(dataset) * 1) * np.sin(phi)
+    return value
+
+# Projector 3
+def projector_3(theta, phi, dataset):
+    value = (1/4) * (5 + plus_minus(dataset) * 4 * np.cos(theta) + 15 * np.cos(2*theta))
+    return value
+
+# Projector 4
+def projector_4(theta, phi, dataset):
+    return 5 * np.sin(theta)**2 * np.cos(2 * phi)
+
+# Projector 5
+def projector_5(theta, phi, dataset):
+    return 5 * np.sin(theta)**2 * np.sin(2 * phi)
+
+# Projector 6
+def projector_6(theta, phi, dataset):
+    value = np.sqrt(2) * np.sin(theta) * (-5 * np.cos(theta) + plus_minus(dataset) * 1) * np.cos(phi)
+    return value
+
+# Projector 7
+def projector_7(theta, phi, dataset):
+    value = np.sqrt(2) * np.sin(theta) * (-5 * np.cos(theta) + plus_minus(dataset) * 1) * np.sin(phi)
+    return value
+
+# Projector 8
+def projector_8(theta, phi, dataset):
+    value = (1 / (4 * np.sqrt(3))) * (-5 + plus_minus(dataset) * 12 * np.cos(theta) - 15 * np.cos(2*theta))
+    return value
+
+# Define the vector of projectors
+def projector_vector(theta, phi, dataset):
+    # Call each projector function and store their results in a list or array
+    vector = np.array([
+        projector_1(theta, phi, dataset),
+        projector_2(theta, phi, dataset),
+        projector_3(theta, phi, dataset),
+        projector_4(theta, phi, dataset),
+        projector_5(theta, phi, dataset),
+        projector_6(theta, phi, dataset),
+        projector_7(theta, phi, dataset),
+        projector_8(theta, phi, dataset)
+    ])
+    return vector
+
+
+def calculate_coefficients_fgh(theta_paths, phi_paths):
+    """
+    Calculate the f, g, and h coefficients and return them as dictionaries.
+    """
+    # Read data and apply mask if provided
+    theta_values = theta_paths
+    phi_values = phi_paths
+    
+    # Initialize coefficients
+    f_coefficients = np.zeros(8)
+    g_coefficients = np.zeros(8)
+    h_coefficients = np.zeros((8, 8))
+    h_uncertainties = np.zeros((8, 8))
+
+    # Calculate projector vectors
+    p_1 = projector_vector(theta_values[1], phi_values[1], 1)
+    p_3 = projector_vector(theta_values[3], phi_values[3], 3)
+
+    # Calculate f and g coefficients using vectorized operations
+    f_coefficients = np.mean(p_1, axis=1)
+    g_coefficients = np.mean(p_3, axis=1)
+
+    # Calculate uncertainties
+    f_uncerainty = np.std(p_1, axis=1) / np.sqrt(len(theta_values[1]))
+    g_uncerainty = np.std(p_3, axis=1) / np.sqrt(len(theta_values[3]))
+
+    # Calculate h coefficients using vectorized operations
+    for i in range(8):
+        for j in range(8):
+            h_coefficients[i,j] = np.mean(p_1[i] * p_3[j])
+            h_uncertainties[i,j] = np.std(p_1[i] * p_3[j]) / np.sqrt(len(theta_values[1]))
+
+    return f_coefficients, g_coefficients, h_coefficients, f_uncerainty, g_uncerainty, h_uncertainties
+

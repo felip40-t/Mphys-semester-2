@@ -100,10 +100,7 @@ m_values = {1: [-1, 0, 1], 2: [-2, -1, 0, 1, 2]}
 #     # Read data and apply mask if provided
 #     theta_values = {1: read_data(theta_paths[1]), 3: read_data(theta_paths[3])}
 #     phi_values = {1: read_data(phi_paths[1]), 3: read_data(phi_paths[3])}
-#     if mask is not None:
-#         theta_values = {key: theta[mask] for key, theta in theta_values.items()}
-#         phi_values = {key: phi[mask] for key, phi in phi_values.items()}
-
+#     
 #     # Initialize coefficients
 #     f_coefficients = np.zeros(8)
 #     g_coefficients = np.zeros(8)
@@ -128,11 +125,11 @@ def calculate_coefficients_AC(theta_paths, phi_paths, mask=None):
     Calculate the A and C coefficients and return them as dictionaries.
     If a mask is provided, it will be applied to the data.
     # """
-    # theta_values = {1: np.loadtxt(theta_paths[1]), 3: np.loadtxt(theta_paths[3])}
-    # phi_values = {1: np.loadtxt(phi_paths[1]), 3: np.loadtxt(phi_paths[3])}
+    theta_values = {1: np.loadtxt(theta_paths[1]), 3: np.loadtxt(theta_paths[3])}
+    phi_values = {1: np.loadtxt(phi_paths[1]), 3: np.loadtxt(phi_paths[3])}
     
-    theta_values = theta_paths
-    phi_values = phi_paths
+    # theta_values = theta_paths
+    # phi_values = phi_paths
 
     # Apply mask if provided
     if mask is not None:
