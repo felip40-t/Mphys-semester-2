@@ -69,3 +69,13 @@ def concurrence_upper(density_matrix):
     purity_A = np.real(purity(rho_A))
     purity_B = np.real(purity(rho_B))
     return 2 * min(1 - purity_A, 1 - purity_B)
+
+
+def concurrence_MB(f_coeffs, g_coeffs, h_coeffs):
+    """
+    Calculate the c_mb^2 concurrence of a bipartite qutrit state.
+    """
+    f_sqrd = np.sum(f_coeffs**2)
+    g_sqrd = np.sum(g_coeffs**2)
+    h_sqrd = np.sum(h_coeffs**2)
+    return - (4 / 9) - (2 / 3) * (f_sqrd + g_sqrd) + 8 * h_sqrd

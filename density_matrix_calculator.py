@@ -49,33 +49,20 @@ def calculate_density_matrix_AC(A_coefficients, C_coefficients, A_unc, C_unc):
     Construct the density matrix using the A and C coefficients.
     """
     density_matrix = np.kron(I_3, I_3).astype(complex)
-    variance_matrix_real = np.kron(I_3, I_3).astype(complex)
-    variance_matrix_imag = np.kron(I_3, I_3).astype(complex)
     
-    for dataset, inner_dict in A_coefficients.items():
-        for (l, m), A_value in inner_dict.items():
-            T_op = T1_operators[m] if l == 1 else T2_operators[m]
-            if dataset == 1:
-                density_matrix += A_value * np.kron(T_op, I_3)
-                variance_matrix_real += (np.real(A_unc[dataset][(l, m)]) * np.kron(T_op, I_3))**2
-                variance_matrix_imag += (np.imag(A_unc[dataset][(l, m)]) * np.kron(T_op, I_3))**2
-            elif dataset == 3:
-                density_matrix += A_value * np.kron(I_3, T_op)
-                variance_matrix_real += (np.real(A_unc[dataset][(l, m)]) * np.kron(I_3, T_op))**2
-                variance_matrix_imag += (np.imag(A_unc[dataset][(l, m)]) * np.kron(I_3, T_op))**2
+    for (l, m), A_value in A_coefficients.items():
+        T_op = T1_operators[m] if l == 1 else T2_operators[m]
+        density_matrix += A_value * np.kron(T_op, I_3)
+        density_matrix += A_value * np.kron(I_3, T_op)
 
     for (l1, m1, l3, m3), C_value in C_coefficients.items():
         T1_op = T1_operators[m1] if l1 == 1 else T2_operators[m1]
         T2_op = T1_operators[m3] if l3 == 1 else T2_operators[m3]
         density_matrix += C_value * np.kron(T1_op, T2_op)
-        variance_matrix_real += (np.real(C_unc[(l1, m1, l3, m3)]) * np.kron(T1_op, T2_op))**2
-        variance_matrix_imag += (np.imag(C_unc[(l1, m1, l3, m3)]) * np.kron(T1_op, T2_op))**2
     
     density_matrix *= 1/9
-    uncertainty_matrix_real = 1/9 * np.sqrt(variance_matrix_real)
-    uncertainty_matrix_imag = 1/9 * np.sqrt(variance_matrix_imag)
     
-    return density_matrix, uncertainty_matrix_real, uncertainty_matrix_imag
+    return density_matrix
 
 def calculate_density_matrix_fgh(f_coefficients, g_coefficients, h_coefficients):
     """
@@ -83,25 +70,38 @@ def calculate_density_matrix_fgh(f_coefficients, g_coefficients, h_coefficients)
     """
     density_matrix = (1 / 9) * np.kron(I_3, I_3).astype(complex)
     for i in range(8):
-        density_matrix += (1 / 6) * f_coefficients[i] * np.kron(lambda_operators[i], I_3)
-        density_matrix += (1 / 6) * g_coefficients[i] * np.kron(I_3, lambda_operators[i])
+        density_matrix += (1 / 3) * f_coefficients[i] * np.kron(lambda_operators[i], I_3)
+        density_matrix += (1 / 3) * g_coefficients[i] * np.kron(I_3, lambda_operators[i])
     for (i, j) in [(i, j) for i in range(8) for j in range(8)]:
-        density_matrix += (1 / 4) * h_coefficients[i, j] * np.kron(lambda_operators[i], lambda_operators[j])
+        density_matrix += h_coefficients[i, j] * np.kron(lambda_operators[i], lambda_operators[j])
 
     return density_matrix
 
-def calculate_uncertainty_matrix_fgh(f_uncertainties, g_uncertainties, h_uncertainties):
+def project_to_psd(rho, normalize_trace=True):
     """
-    Calculate the uncertainty matrix using the uncertainties of f, g, and h coefficients.
-    """
-    uncertainty_matrix = np.zeros((9, 9), dtype=complex)
+    Project a Hermitian matrix rho to the nearest positive semi-definite matrix.
     
-    for i in range(8):
-        uncertainty_matrix += ((1 / 6) * f_uncertainties[i] * np.abs(np.kron(lambda_operators[i], I_3)))**2
-        uncertainty_matrix += ((1 / 6) * g_uncertainties[i] * np.abs(np.kron(I_3, lambda_operators[i])))**2
+    Parameters:
+        rho (np.ndarray): Hermitian matrix to be projected (e.g., 9x9).
+        normalize_trace (bool): Whether to renormalize to trace 1.
+    
+    Returns:
+        np.ndarray: PSD matrix closest to rho.
+    """
+    # Ensure Hermitian (for safety)
+    rho = (rho + rho.conj().T) / 2
+    
+    # Eigen-decomposition
+    eigenvalues, eigenvectors = np.linalg.eigh(rho)
 
-    for i in range(8):
-        for j in range(8):
-            uncertainty_matrix += ((1 / 4) * h_uncertainties[i, j] * np.abs(np.kron(lambda_operators[i], lambda_operators[j])))**2
+    # Clip negative eigenvalues
+    eigenvalues_clipped = np.clip(eigenvalues, 0, None)
 
-    return np.sqrt(uncertainty_matrix)
+    # Reconstruct the matrix
+    rho_psd = (eigenvectors @ np.diag(eigenvalues_clipped) @ eigenvectors.conj().T)
+
+    # Optional: Normalize trace
+    if normalize_trace:
+        rho_psd /= np.trace(rho_psd)
+    
+    return rho_psd

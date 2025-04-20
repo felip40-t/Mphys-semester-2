@@ -1,11 +1,12 @@
+from tabnanny import check
 import numpy as np
 import os
 from histo_plotter import read_data
-from coefficient_calculator_ZZ import calculate_coefficients_AC, read_masked_data
-from density_matrix_calculator import calculate_density_matrix_AC, O_bell_prime1
+from coefficient_calculator_ZZ import calculate_coefficients_AC, read_masked_data, calculate_coefficients_fgh
+from density_matrix_calculator import calculate_density_matrix_AC, O_bell_prime1, calculate_density_matrix_fgh
 from Bell_inequality_optimizer import bell_inequality_optimization, inequality_function
 from Unitary_Matrix import euler_unitary_matrix
-from concurrence_bound import concurrence_lower, check_density_matrix, concurrence_upper
+from concurrence_bound import concurrence_lower, check_density_matrix, concurrence_MB
 import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter
 
@@ -95,8 +96,6 @@ regions = {
 #             uniformity = 1.0 - (std / mean)
 #         else:
 #             uniformity = 0.0
-
-#         # Store the moment-based gradient in the uniformity grid
 #         uniformity_grid[i, j] = uniformity
 
 
@@ -177,92 +176,141 @@ regions = {
 # plot_filename = os.path.join(ZZ_save, "bell_operator_contour_ZZ_paper.pdf")
 # plt.savefig(plot_filename)
 
+# Calculate for single region
+# region = regions[(6,12)]
+# save_dir = os.path.join(ZZ_path, f"cos_psi_{region[0][0]}_{region[0][1]}_inv_mass_{region[1][0]}_{region[1][1]}")
+# if not os.path.exists(save_dir):
+#     print(f"Directory not found.")
 
-regions = { 
-        (i, j): [(cos_min, cos_min + 0.1), (mass_min, mass_min + 50.0)]
-        for i in range(9)
-        for j in range(16)
-        for cos_min in [0.0 + 0.1 * i]
-        for mass_min in [200.0 + 50.0 * j]
-    }
+# cos_theta_paths = {
+#     1: os.path.join(save_dir, "e+_theta_data_combined_new.txt"),
+#     3: os.path.join(save_dir, "mu+_theta_data_combined_new.txt")
+# }
 
-bell_value_grid = np.zeros((9, 16, 4))
-concurrence_grid = np.zeros((9, 16, 4))
-optimal_params_grid = np.zeros((16, 9, 16, 4))
+# phi_paths = {
+#     1: os.path.join(save_dir, "e+_phi_data_combined_new.txt"),
+#     3: os.path.join(save_dir, "mu+_phi_data_combined_new.txt")
+# }
 
-bell_value_avg_grid = np.zeros((9, 16))
-concurrence_avg_grid = np.zeros((9, 16))
+# cos_psi_path = os.path.join(save_dir, "psi_data_combined_new.txt")
+# ZZ_inv_path = os.path.join(save_dir, "ZZ_inv_mass_combined_new.txt")
 
-for key, region in regions.items():
-    print("Calculating for region:", region)
-    save_dir = os.path.join(ZZ_path, f"cos_psi_{region[0][0]}_{region[0][1]}_inv_mass_{region[1][0]}_{region[1][1]}")
-    if not os.path.exists(save_dir):
-        print(f"Directory not found.")
+region = [(0.6, 0.7), (750.0, 800.0)]
+save_dir = os.path.join(ZZ_path, "run_453")
+if not os.path.exists(save_dir):
+    print(f"Directory not found.")
+
+cos_theta_paths = {
+    1: os.path.join(save_dir, "e+_theta_data.txt"),
+    3: os.path.join(save_dir, "mu+_theta_data.txt")
+}
+
+phi_paths = {
+    1: os.path.join(save_dir, "e+_phi_data.txt"),
+    3: os.path.join(save_dir, "mu+_phi_data.txt")
+}
+
+cos_psi_path = os.path.join(save_dir, "psi_data.txt")
+ZZ_inv_path = os.path.join(save_dir, "ZZ_inv_mass.txt")
+
+
+cos_psi_data = np.loadtxt(cos_psi_path)
+ZZ_inv_mass = np.loadtxt(ZZ_inv_path)
+
+A_coefficients, C_coefficients, A_uncertainties, C_uncertainties = calculate_coefficients_AC(cos_theta_paths, phi_paths)
+density_matrix, _, _ = calculate_density_matrix_AC(A_coefficients, C_coefficients, A_uncertainties, C_uncertainties)
+check_density_matrix(density_matrix)
+bell_value, optimal_params = bell_inequality_optimization(density_matrix, O_bell_prime1)
+concurrence_val = concurrence_lower(density_matrix)
+print(f"Region: {region}\n")
+print(f"Bell operator = {bell_value:.4f}\nConcurrence = {concurrence_val:.4f}\n")
+
+
+
+
+
+
+
+
+
+
+# bell_value_grid = np.zeros((9, 16, 4))
+# concurrence_grid = np.zeros((9, 16, 4))
+# optimal_params_grid = np.zeros((16, 9, 16, 4))
+
+# bell_value_avg_grid = np.zeros((9, 16))
+# concurrence_avg_grid = np.zeros((9, 16))
+
+# for key, region in regions.items():
+#     print("Calculating for region:", region)
+#     save_dir = os.path.join(ZZ_path, f"cos_psi_{region[0][0]}_{region[0][1]}_inv_mass_{region[1][0]}_{region[1][1]}")
+#     if not os.path.exists(save_dir):
+#         print(f"Directory not found.")
     
-    cos_theta_paths = {
-    1: os.path.join(save_dir, "e+_theta_data_combined_new.txt"),
-    3: os.path.join(save_dir, "mu+_theta_data_combined_new.txt")
-    }
-    phi_paths = {
-        1: os.path.join(save_dir, "e+_phi_data_combined_new.txt"),
-        3: os.path.join(save_dir, "mu+_phi_data_combined_new.txt")
-    }
+#     cos_theta_paths = {
+#         1: os.path.join(save_dir, "e+_theta_data_combined_new.txt"),
+#         3: os.path.join(save_dir, "mu+_theta_data_combined_new.txt")
+#     }
+#     phi_paths = {
+#         1: os.path.join(save_dir, "e+_phi_data_combined_new.txt"),
+#         3: os.path.join(save_dir, "mu+_phi_data_combined_new.txt")
+#     }
 
-    cos_psi_path = os.path.join(save_dir, "psi_data_combined_new.txt")
-    ZZ_inv_path = os.path.join(save_dir, "ZZ_inv_mass_combined_new.txt")
-    cos_psi_data = np.loadtxt(cos_psi_path)
-    ZZ_inv_mass = np.loadtxt(ZZ_inv_path)
+#     cos_psi_path = os.path.join(save_dir, "psi_data_combined_new.txt")
+#     ZZ_inv_path = os.path.join(save_dir, "ZZ_inv_mass_combined_new.txt")
+#     cos_psi_data = np.loadtxt(cos_psi_path)
+#     ZZ_inv_mass = np.loadtxt(ZZ_inv_path)
 
-    cos_range = region[0]
-    mass_range = region[1]
+#     cos_range = region[0]
+#     mass_range = region[1]
 
-    # Create subregions by halving both axes
-    subregions = [
-        [(cos_range[0], (cos_range[0] + cos_range[1]) / 2), (mass_range[0], (mass_range[0] + mass_range[1]) / 2)],  # bottom-left
-        [(cos_range[0], (cos_range[0] + cos_range[1]) / 2), ((mass_range[0] + mass_range[1]) / 2, mass_range[1])],  # top-left
-        [((cos_range[0] + cos_range[1]) / 2, cos_range[1]), (mass_range[0], (mass_range[0] + mass_range[1]) / 2)],  # bottom-right
-        [((cos_range[0] + cos_range[1]) / 2, cos_range[1]), ((mass_range[0] + mass_range[1]) / 2, mass_range[1])]   # top-right
-    ]
+#     # Create subregions by halving both axes
+#     subregions = [
+#         [(cos_range[0], (cos_range[0] + cos_range[1]) / 2), (mass_range[0], (mass_range[0] + mass_range[1]) / 2)],  # bottom-left
+#         [(cos_range[0], (cos_range[0] + cos_range[1]) / 2), ((mass_range[0] + mass_range[1]) / 2, mass_range[1])],  # top-left
+#         [((cos_range[0] + cos_range[1]) / 2, cos_range[1]), (mass_range[0], (mass_range[0] + mass_range[1]) / 2)],  # bottom-right
+#         [((cos_range[0] + cos_range[1]) / 2, cos_range[1]), ((mass_range[0] + mass_range[1]) / 2, mass_range[1])]   # top-right
+#     ]
 
-    weighted_bell_sum = 0.0
-    weighted_conc_sum = 0.0
-    total_events = 0
+#     weighted_bell_sum = 0.0
+#     weighted_conc_sum = 0.0
+#     total_events = 0
 
-    # Loop over subregions and compute Bell operator
-    for idx, subregion in enumerate(subregions):
-        cos_sub, mass_sub = subregion
-        mask = read_masked_data(cos_psi_data, ZZ_inv_mass, cos_sub, mass_sub)
-        event_count = np.sum(mask)
+#     # Loop over subregions and compute Bell operator
+#     for idx, subregion in enumerate(subregions):
+#         cos_sub, mass_sub = subregion
+#         mask = read_masked_data(cos_psi_data, ZZ_inv_mass, cos_sub, mass_sub)
+#         event_count = np.sum(mask)
 
-        A_coefficients, C_coefficients, A_uncertainties, C_uncertainties = calculate_coefficients_AC(cos_theta_paths, phi_paths, mask)
-        density_matrix, uncertainty_matrix_real, uncertainty_matrix_imag = calculate_density_matrix_AC(A_coefficients, C_coefficients, A_uncertainties, C_uncertainties)
-        bell_value, optimal_params = bell_inequality_optimization(density_matrix, O_bell_prime1)
-        concurrence_val = concurrence_lower(density_matrix)
+#         A_coefficients, C_coefficients, A_uncertainties, C_uncertainties = calculate_coefficients_AC(cos_theta_paths, phi_paths, mask)
+#         density_matrix, _, _ = calculate_density_matrix_AC(A_coefficients, C_coefficients, A_uncertainties, C_uncertainties)
+#         bell_value, optimal_params = bell_inequality_optimization(density_matrix, O_bell_prime1)
+#         concurrence_val = concurrence_lower(density_matrix)
 
-        print(f"Subregion {subregion}:\n Bell operator = {bell_value:.4f}\n Concurrence = {concurrence_val:.4f}\n")
+#         print(f"Subregion {subregion}:\n Bell operator = {bell_value:.4f}\n Concurrence = {concurrence_val:.4f}\n")
         
-        # Store the Bell operator value and concurrence in the grid
-        bell_value_grid[key[0], key[1], idx] = bell_value
-        concurrence_grid[key[0], key[1], idx] = concurrence_val
-        # Store the optimal parameters in the grid
-        optimal_params_grid[:, key[0], key[1], idx] = optimal_params
+#         # Store the Bell operator value and concurrence in the grid
+#         bell_value_grid[key[0], key[1], idx] = bell_value
+#         concurrence_grid[key[0], key[1], idx] = concurrence_val
+#         # Store the optimal parameters in the grid
+#         optimal_params_grid[:, key[0], key[1], idx] = optimal_params
 
-        # Weighted accumulation
-        weighted_bell_sum += bell_value * event_count
-        weighted_conc_sum += concurrence_val * event_count
-        total_events += event_count
+#         # Weighted accumulation
+#         weighted_bell_sum += bell_value * event_count
+#         weighted_conc_sum += concurrence_val * event_count
+#         total_events += event_count
 
-    bell_value_avg_grid[key[0], key[1]] = weighted_bell_sum / total_events
-    concurrence_avg_grid[key[0], key[1]] = weighted_conc_sum / total_events
+#     bell_value_avg_grid[key[0], key[1]] = weighted_bell_sum / total_events
+#     concurrence_avg_grid[key[0], key[1]] = weighted_conc_sum / total_events
 
-# Save the weighted average Bell operator and concurrence grids
-np.savetxt(os.path.join(ZZ_save, "bell_operator_weighted_avg_grid_ZZ_9x16.txt"), bell_value_avg_grid, delimiter=',')
-np.savetxt(os.path.join(ZZ_save, "concurrence_weighted_avg_grid_ZZ_9x16.txt"), concurrence_avg_grid, delimiter=',')
+#     # Save the weighted average Bell operator and concurrence grids
+#     np.savetxt(os.path.join(ZZ_save, "bell_operator_weighted_avg_grid_ZZ_9x16.txt"), bell_value_avg_grid, delimiter=',')
+#     np.savetxt(os.path.join(ZZ_save, "concurrence_weighted_avg_grid_ZZ_9x16.txt"), concurrence_avg_grid, delimiter=',')
 
-# Save the full grids with all subregion data
-np.save(os.path.join(ZZ_save, "bell_operator_subregions_ZZ_9x16x4.npy"), bell_value_grid)
-np.save(os.path.join(ZZ_save, "concurrence_subregions_ZZ_9x16x4.npy"), concurrence_grid)
-np.save(os.path.join(ZZ_save, "optimal_params_grid_ZZ_16x9x16x4.npy"), optimal_params_grid)
+#     # Save the full grids with all subregion data
+#     np.save(os.path.join(ZZ_save, "bell_operator_subregions_ZZ_9x16x4.npy"), bell_value_grid)
+#     np.save(os.path.join(ZZ_save, "concurrence_subregions_ZZ_9x16x4.npy"), concurrence_grid)
+#     np.save(os.path.join(ZZ_save, "optimal_params_grid_ZZ_16x9x16x4.npy"), optimal_params_grid)
 
 # print("Bell operator value grid:")
 # for row in bell_value_grid:

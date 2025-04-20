@@ -1,11 +1,11 @@
 import numpy as np
 import os
 from histo_plotter import read_data
-from coefficient_calculator_WW import calculate_coefficients, read_masked_data, calculate_coefficients_fgh
-from density_matrix_calculator import calculate_density_matrix_AC, O_bell_prime1, calculate_density_matrix_fgh, calculate_uncertainty_matrix_fgh
-from Bell_inequality_optimizer import bell_inequality_optimization, inequality_function
+from coefficient_calculator_WW import calculate_coefficients, read_masked_data, calculate_coefficients_fgh, calculate_variance_fgh
+from density_matrix_calculator import calculate_density_matrix_AC, O_bell_prime1, calculate_density_matrix_fgh, project_to_psd
+from Bell_inequality_optimizer import bell_inequality_optimization, inequality_function, optimal_bell_operator
 from Unitary_Matrix import euler_unitary_matrix
-from concurrence_bound import concurrence_lower, check_density_matrix
+from concurrence_bound import concurrence_lower, check_density_matrix, concurrence_MB
 import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter
 
@@ -63,53 +63,53 @@ regions = {
 # plt.savefig(heatmap_filename)
 
 
-uniformity_grid = np.zeros((9, 20))  # To store uniformity scores
+# uniformity_grid = np.zeros((9, 20))  # To store uniformity scores
 
-for (i, j), region in regions.items():
-    print(f"Calculating uniformity for region: {region}...")
+# for (i, j), region in regions.items():
+#     print(f"Calculating uniformity for region: {region}...")
 
-    save_dir = os.path.join(WW_path, f"cos_psi_{region[0][0]}_{region[0][1]}_inv_mass_{region[1][0]}_{region[1][1]}")
+#     save_dir = os.path.join(WW_path, f"cos_psi_{region[0][0]}_{region[0][1]}_inv_mass_{region[1][0]}_{region[1][1]}")
     
-    if os.path.exists(save_dir):
-        cos_psi_path = os.path.join(save_dir, "psi_data.txt")
-        WW_inv_path = os.path.join(save_dir, "WW_inv_mass.txt")
+#     if os.path.exists(save_dir):
+#         cos_psi_path = os.path.join(save_dir, "psi_data.txt")
+#         WW_inv_path = os.path.join(save_dir, "WW_inv_mass.txt")
 
-        cos_psi_data = np.loadtxt(cos_psi_path)
-        WW_inv_mass = np.loadtxt(WW_inv_path)
-
-
-        # Histogram within region: use 10x10 binning
-        h, _, _ = np.histogram2d(WW_inv_mass, cos_psi_data, bins=[10, 10])
-        mean = np.mean(h)
-        std = np.std(h)
-
-        # Avoid divide by zero
-        if mean > 0:
-            uniformity = 1.0 - (std / mean)
-        else:
-            uniformity = 0.0
-
-        # Store the moment-based gradient in the uniformity grid
-        uniformity_grid[i, j] = uniformity
+#         cos_psi_data = np.loadtxt(cos_psi_path)
+#         WW_inv_mass = np.loadtxt(WW_inv_path)
 
 
-# Save the uniformity scores as a .npy file
-uniformity_grid = uniformity_grid.T  # Transpose to match the grid shape
-np.save(os.path.join(WW_save, "uniformity_scores.npy"), uniformity_grid)
+#         # Histogram within region: use 10x10 binning
+#         h, _, _ = np.histogram2d(WW_inv_mass, cos_psi_data, bins=[10, 10])
+#         mean = np.mean(h)
+#         std = np.std(h)
 
-# # Read the uniformity scores from the .npy file
-# uniformity_grid = np.load(os.path.join(WW_save, "uniformity_scores.npy"))
+#         # Avoid divide by zero
+#         if mean > 0:
+#             uniformity = 1.0 - (std / mean)
+#         else:
+#             uniformity = 0.0
+
+#         # Store the moment-based gradient in the uniformity grid
+#         uniformity_grid[i, j] = uniformity
 
 
-# Plot the heatmap of uniformity scores
-plt.figure(figsize=(12, 10))
-plt.imshow(uniformity_grid, origin='lower', extent=[0, 0.9, 200, 1200], aspect='auto', cmap='plasma')
-colorbar = plt.colorbar(label='Uniformity Score', orientation='vertical')
-colorbar.ax.yaxis.label.set_fontsize(16)
-plt.xlabel(r'$\cos{\Theta}$', fontsize=16)  
-plt.ylabel(r'$M_{WW} (GeV)$', fontsize=16)
-plt.yticks(np.arange(200, 1201, 100), fontsize=12)
-plt.xticks(np.arange(0.0, 1.0, 0.1), fontsize=12)
+# # Save the uniformity scores as a .npy file
+# uniformity_grid = uniformity_grid.T  # Transpose to match the grid shape
+# np.save(os.path.join(WW_save, "uniformity_scores.npy"), uniformity_grid)
+
+# # # Read the uniformity scores from the .npy file
+# # uniformity_grid = np.load(os.path.join(WW_save, "uniformity_scores.npy"))
+
+
+# # Plot the heatmap of uniformity scores
+# plt.figure(figsize=(12, 10))
+# plt.imshow(uniformity_grid, origin='lower', extent=[0, 0.9, 200, 1200], aspect='auto', cmap='plasma_r', vmin=0.7, vmax=1)
+# colorbar = plt.colorbar(label='Uniformity Score', orientation='vertical')
+# colorbar.ax.yaxis.label.set_fontsize(16)
+# plt.xlabel(r'$\cos{\Theta}$', fontsize=16)  
+# plt.ylabel(r'$M_{WW} (GeV)$', fontsize=16)
+# plt.yticks(np.arange(200, 1201, 100), fontsize=14)
+# plt.xticks(np.arange(0.0, 1.0, 0.1), fontsize=14)
 
 # # Add the value of the uniformity score to each square
 # num_rows, num_cols = uniformity_grid.shape
@@ -118,51 +118,59 @@ plt.xticks(np.arange(0.0, 1.0, 0.1), fontsize=12)
 # for i, y in enumerate(y_centers):
 #     for j, x in enumerate(x_centers):
 #         score = uniformity_grid[i, j]
-#         plt.text(x, y, f"{score:.2f}", color="white", ha="center", va="center", fontsize=9)
+#         plt.text(x, y, f"{score:.2f}", color="white", ha="center", va="center", fontsize=12)
 
-# Save the plot
-heatmap_filename = os.path.join(WW_save, "uniformity_heatmap_WW_type2.pdf")
-plt.savefig(heatmap_filename)
-heatmap_filename = os.path.join(WW_save, "uniformity_heatmap_WW_type2.png")
-plt.savefig(heatmap_filename)
-
-
+# # Save the plot
+# heatmap_filename = os.path.join(WW_save, "uniformity_heatmap_WW.pdf")
+# plt.savefig(heatmap_filename)
+# heatmap_filename = os.path.join(WW_save, "uniformity_heatmap_WW.png")
+# plt.savefig(heatmap_filename)
 
 
-# # Calculate bell operator for single region
-# region = [(0.0, 0.1), (550.0, 600.0)]
-# save_dir = os.path.join(WW_path, f"cos_psi_{region[0][0]}_{region[0][1]}_inv_mass_{region[1][0]}_{region[1][1]}")
-# if os.path.exists(save_dir):
-#     print(f"Directory {save_dir} found.")
 
-# # Read theta and phi values for both datasets
-# cos_theta_paths = {
-#     1: os.path.join(save_dir, "e+_theta_data.txt"),
-#     3: os.path.join(save_dir, "mu-_theta_data.txt")
-# }
-# phi_paths = {
-#     1: os.path.join(save_dir, "e+_phi_data.txt"),
-#     3: os.path.join(save_dir, "mu-_phi_data.txt")
-# }
-# cos_psi_path = os.path.join(save_dir, "psi_data.txt")
-# WW_inv_path = os.path.join(save_dir, "WW_inv_mass.txt")
-# cos_psi_data = np.loadtxt(cos_psi_path)
-# WW_inv_mass = np.loadtxt(WW_inv_path)
 
-# A_coefficients, C_coefficients, A_uncertainties, C_uncertainties = calculate_coefficients(cos_theta_paths, phi_paths)
-# density_matrix, uncertainty_matrix_real, uncertainty_matrix_imag = calculate_density_matrix_AC(A_coefficients, C_coefficients, A_uncertainties, C_uncertainties)
+# Calculate bell operator for single region
+region = regions[(8, 6)]
+print(f"Calculating for region: {region}...")
+save_dir = os.path.join(WW_path, f"cos_psi_{region[0][0]}_{region[0][1]}_inv_mass_{region[1][0]}_{region[1][1]}")
+if os.path.exists(save_dir):
+    print(f"Directory {save_dir} found.")
 
-# f_coefficients, g_coefficients, h_coefficients, f_uncs, g_uncs, h_uncs = calculate_coefficients_fgh(cos_theta_paths, phi_paths)
-# density_matrix = calculate_density_matrix_fgh(f_coefficients, g_coefficients, h_coefficients)
-# uncertainty_matrix = calculate_uncertainty_matrix_fgh(f_uncs, g_uncs, h_uncs)
-# check_density_matrix(density_matrix)
+# Read theta and phi values for both datasets
+theta_paths = {
+    1: os.path.join(save_dir, "e+_theta_data.txt"),
+    3: os.path.join(save_dir, "mu-_theta_data.txt")
+}
+phi_paths = {
+    1: os.path.join(save_dir, "e+_phi_data.txt"),
+    3: os.path.join(save_dir, "mu-_phi_data.txt")
+}
+cos_psi_path = os.path.join(save_dir, "psi_data.txt")
+WW_inv_path = os.path.join(save_dir, "WW_inv_mass.txt")
+cos_psi_data = np.loadtxt(cos_psi_path)
+WW_inv_mass = np.loadtxt(WW_inv_path)
 
-# # Calculate the concurrence value for the region
-# concurrence_val = concurrence_lower(density_matrix)
-# print(f"Concurrence bound for region: {region} = {concurrence_val:.4g}")
-# # Calculate the Bell operator value for the region
-# bell_value, optimal_params = bell_inequality_optimization(density_matrix, O_bell_prime1)
-# print(f"Bell operator value for region: {region} = {bell_value:.4g}")
+# A_coefficients, C_coefficients = calculate_coefficients(theta_paths, phi_paths)
+# density_matrix= calculate_density_matrix_AC(A_coefficients, C_coefficients)
+
+f_coefficients, g_coefficients, h_coefficients = calculate_coefficients_fgh(theta_paths, phi_paths)
+density_matrix = calculate_density_matrix_fgh(f_coefficients, g_coefficients, h_coefficients)
+
+check_density_matrix(density_matrix)
+density_matrix = project_to_psd(density_matrix)
+check_density_matrix(density_matrix)
+
+# Calculate the concurrence value for the region
+concurrence_val = concurrence_lower(density_matrix)
+print(f"Concurrence bound for region: {region} = {concurrence_val:.4g}")
+# Calculate the Bell operator value for the region
+bell_value, optimal_params = bell_inequality_optimization(density_matrix, O_bell_prime1)
+optimal_O_bell = optimal_bell_operator(O_bell_prime1, optimal_params)
+print(f"Bell operator value for region: {region} = {bell_value:.4g}")
+
+variance = calculate_variance_fgh(theta_paths, phi_paths, optimal_O_bell).real
+uncertainty_bell = np.sqrt(variance)
+print(f"Uncertainty of Bell operator for region: {region} = {uncertainty_bell:.6g}")
 
 # bell_matrix = np.array([
 #     [2.18, 2.15, 2.05, 2.05, 1.95, 1.8, 1.75, 1.7, 1.65],
