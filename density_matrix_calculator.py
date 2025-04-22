@@ -44,16 +44,18 @@ O_bell_prime1 = -2/sqrt3 * (np.kron(S_x, S_x) + np.kron(S_y, S_y)) + np.kron(lam
 # print(O_bell_prime2)
 
 
-def calculate_density_matrix_AC(A_coefficients, C_coefficients, A_unc, C_unc):
+def calculate_density_matrix_AC(A_coefficients, C_coefficients):
     """
     Construct the density matrix using the A and C coefficients.
     """
     density_matrix = np.kron(I_3, I_3).astype(complex)
-    
-    for (l, m), A_value in A_coefficients.items():
-        T_op = T1_operators[m] if l == 1 else T2_operators[m]
-        density_matrix += A_value * np.kron(T_op, I_3)
-        density_matrix += A_value * np.kron(I_3, T_op)
+    for dataset, inner_dict in A_coefficients.items():
+        for (l, m), A_value in inner_dict.items():
+            T_op = T1_operators[m] if l == 1 else T2_operators[m]
+            if dataset == 1:
+                density_matrix += A_value * np.kron(T_op, I_3)
+            elif dataset == 3:
+                density_matrix += A_value * np.kron(I_3, T_op)
 
     for (l1, m1, l3, m3), C_value in C_coefficients.items():
         T1_op = T1_operators[m1] if l1 == 1 else T2_operators[m1]
@@ -77,7 +79,11 @@ def calculate_density_matrix_fgh(f_coefficients, g_coefficients, h_coefficients)
 
     return density_matrix
 
-def project_to_psd(rho, normalize_trace=True):
+def gradual_shift_func(x, a):
+    return (1 - a) * x * np.exp(x / a)
+
+
+def project_to_psd(rho, const, normalize_trace=True):
     """
     Project a Hermitian matrix rho to the nearest positive semi-definite matrix.
     
@@ -88,14 +94,11 @@ def project_to_psd(rho, normalize_trace=True):
     Returns:
         np.ndarray: PSD matrix closest to rho.
     """
-    # Ensure Hermitian (for safety)
-    rho = (rho + rho.conj().T) / 2
     
     # Eigen-decomposition
     eigenvalues, eigenvectors = np.linalg.eigh(rho)
 
-    # Clip negative eigenvalues
-    eigenvalues_clipped = np.clip(eigenvalues, 0, None)
+    eigenvalues_clipped = np.where(eigenvalues < 0, gradual_shift_func(eigenvalues, const), eigenvalues)
 
     # Reconstruct the matrix
     rho_psd = (eigenvectors @ np.diag(eigenvalues_clipped) @ eigenvectors.conj().T)
@@ -103,5 +106,30 @@ def project_to_psd(rho, normalize_trace=True):
     # Optional: Normalize trace
     if normalize_trace:
         rho_psd /= np.trace(rho_psd)
+
+    # Ensure the matrix is Hermitian
+    rho_psd = (rho_psd + rho_psd.conj().T) / 2
     
     return rho_psd
+
+def unphysicality_score(density_matrix):
+    """
+    Calculate the unphysicality score of a density matrix.
+    
+    Parameters:
+        density_matrix (np.ndarray): Density matrix to evaluate.
+    
+    Returns:
+        float: Unphysicality score (trace of the difference between the density matrix and its PSD projection).
+    """
+    # Calculate unphysicality score
+    score = 0
+
+    # Calculate eigenvalues and eigenvectors
+    eigenvalues, eigenvectors = np.linalg.eigh(density_matrix)
+    for i in range(len(eigenvalues)):
+        # Calculate the unphysicality score
+        if eigenvalues[i] < 0:
+            score += abs(eigenvalues[i])
+    
+    return score / np.max(eigenvalues)

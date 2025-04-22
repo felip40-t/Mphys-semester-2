@@ -3,7 +3,7 @@ import os
 import csv
 from scipy.special import sph_harm_y
 from histo_plotter import read_data
-from density_matrix_calculator import lambda_operators, O_bell_prime1
+from density_matrix_calculator import lambda_operators
 
 # Constants
 ETA = 1
@@ -250,10 +250,6 @@ def calculate_variance_fgh(theta_paths, phi_paths, O):
     p_1 = 0.5 * projector_vector(theta_values[1], phi_values[1], 1)
     p_3 = 0.5 * projector_vector(theta_values[3], phi_values[3], 3)
 
-    # Normalize projectors
-    p_1 /= np.linalg.norm(p_1, axis=0)
-    p_3 /= np.linalg.norm(p_3, axis=0)
-
     non_zero_f, non_zero_g, non_zero_h = find_nonzero_trace_terms(O)
 
     # Build coefficient matrix and trace vector
@@ -277,9 +273,10 @@ def calculate_variance_fgh(theta_paths, phi_paths, O):
     trace_vector = np.array(trace_vector)
 
     # Covariance matrix of coefficients (shape: n_coeffs x n_coeffs)
-    cov_matrix = np.cov(coeff_matrix, rowvar=False)
+    cov_matrix = np.cov(coeff_matrix, rowvar=False) / n_samples
+    # cov_matrix = np.diag(np.diag(full_cov_matrix))
 
-    # Variance = a^T C a
+    # Variance = 
     variance = trace_vector.T @ cov_matrix @ trace_vector
 
     return variance

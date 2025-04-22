@@ -6,8 +6,8 @@ def optimal_bell_operator(O_bell_prime, parameters):
         """
         Calculate the optimal Bell operator using the given parameters.
         """
-        U_params = parameters[:8]
-        V_params = parameters[8:]
+        U_params = parameters[:6]
+        V_params = parameters[6:]
         U = euler_unitary_matrix(*U_params)
         V = euler_unitary_matrix(*V_params)
         U_cross_V = np.kron(U, V)
@@ -29,7 +29,7 @@ def bell_inequality_optimization(density_matrix, O_bell_prime):
     """
     Perform the optimization procedure to maximize the Bell inequality.
     """
-    bounds = [(0, 2 * np.pi)] * 16  # Define bounds for the parameters
+    bounds = [(0, 2 * np.pi)] * 12  # Define bounds for the parameters
 
     # Enable parallelization by setting workers=-1 in differential_evolution
     result = differential_evolution(inequality_function_pseudo, bounds, args=(density_matrix, O_bell_prime), workers=-1)

@@ -1,8 +1,10 @@
+from matplotlib.pylab import f
 import numpy as np
 import os
 import csv
 from scipy.special import sph_harm_y
 from histo_plotter import read_data
+from density_matrix_calculator import T1_operators, T2_operators
 
 ZZ_path = "/home/felipetcach/project/MG5_aMC_v3_5_6/pp_ZZ_SM/Plots and data"
 # Read theta and phi values for both datasets
@@ -17,13 +19,13 @@ phi_paths = {
 
 # Constants
 ETA = 0.213
-g_L = -0.2766
-g_R = 0.2234
+g_L = -0.26953
+g_R = 0.2317
 
 l_values = [1, 2]
 m_values = {1: [-1, 0, 1], 2: [-2, -1, 0, 1, 2]}
 
-a_matrix = ( 1 / (g_L**2 - g_R**2) ) * np.array([[g_R**2, 0, 0, 0, 0, g_L**2, 0, 0], 
+a_matrix = ( 1 / (g_R**2 - g_L**2) ) * np.array([[g_R**2, 0, 0, 0, 0, g_L**2, 0, 0], 
                                                  [0, g_R**2, 0, 0, 0, 0, g_L**2, 0], 
                                                  [0, 0, g_R**2 - 0.5 * g_L**2, 0, 0, 0, 0, (np.sqrt(3)/2) * g_L**2], 
                                                  [0, 0, 0, g_R**2 - g_L**2, 0, 0, 0, 0], 
@@ -111,13 +113,15 @@ def calculate_coefficients_fgh(theta_paths, phi_paths, mask=None):
     p_3 = a_matrix @ projector_vector(theta_values[3], phi_values[3], 1)
 
     # Calculate f and g coefficients using vectorized operations
-    f_coefficients = 0.5 * np.mean(p_1, axis=1)
-    g_coefficients = 0.5 * np.mean(p_3, axis=1)
+    for i in range(8):
+        f_coefficients[i] = 0.5 * 0.5 * 0.5 * np.mean(p_1[i] + p_3[i])
+
+    g_coefficients = np.copy(f_coefficients)
 
     # Calculate h coefficients using vectorized operations
     for i in range(8):
         for j in range(8):
-            h_coefficients[i,j] = 0.25 * np.mean(p_1[i] * p_3[j])
+            h_coefficients[i,j] = 0.5 * 0.25 * 0.25 * np.mean(p_1[i] * p_3[j] + p_3[i] * p_1[j])
 
     return f_coefficients, g_coefficients, h_coefficients
 
@@ -138,29 +142,21 @@ def calculate_coefficients_AC(theta_paths, phi_paths, mask=None):
         theta_values = {key: theta[mask] for key, theta in theta_values.items()}
         phi_values = {key: phi[mask] for key, phi in phi_values.items()}
 
-    A_coefficients = {}
+    A_coefficients = {1: {}, 3: {}}
     C_coefficients = {}
-    A_unc = {}
-    C_unc = {}
 
     # Compute A coefficients
-    for l in l_values:
-        for m in m_values[l]:
-            alpha1 = np.mean(sph_harm_y(l, m, theta_values[1], phi_values[1]))
-            alpha3 = np.mean(sph_harm_y(l, m, theta_values[3], phi_values[3]))
-            print("alpha1:", alpha1)
-            print("alpha3:", alpha3)
-            alpha = (np.mean(sph_harm_y(l, m, theta_values[1], phi_values[1]) + sph_harm_y(l, m, theta_values[3], phi_values[3]))) / 2
-            alpha_unc = np.std(sph_harm_y(l, m, theta_values[1], phi_values[1]) + sph_harm_y(l, m, theta_values[3], phi_values[3])) / np.sqrt(2 * len(theta_values[1]))
+    for dataset in [1, 3]:
+        for l in l_values:
+            for m in m_values[l]:
+                alpha = np.mean(sph_harm_y(l, m, theta_values[dataset], phi_values[dataset]))
+                if l == 1:
+                    A_coefficients[dataset][(l, m)] = -np.sqrt(8 * np.pi) * alpha / ETA
+                elif l == 2:
+                    A_coefficients[dataset][(l, m)] = np.sqrt(40 * np.pi) * alpha
             
-            if l == 1:
-                A_coefficients[(l, m)] = -np.sqrt(8 * np.pi) * alpha / ETA
-                A_unc[(l, m)] = np.sqrt(8 * np.pi) * alpha_unc / ETA
-            elif l == 2:
-                A_coefficients[(l, m)] = np.sqrt(40 * np.pi) * alpha
-                A_unc[(l, m)] = np.sqrt(40 * np.pi) * alpha_unc
 
-    # Compute symmetric C coefficients
+    # ComputeC coefficients
     for l1, l3 in [(1, 1), (2, 2), (1, 2), (2, 1)]:
         for m1 in m_values[l1]:
             for m3 in m_values[l3]:
@@ -168,32 +164,18 @@ def calculate_coefficients_AC(theta_paths, phi_paths, mask=None):
                 sph_harm_3 = sph_harm_y(l3, m3, theta_values[3], phi_values[3])
                 product = sph_harm_1 * sph_harm_3
                 gamma = np.mean(product)
-                gamma_unc = np.std(product) / np.sqrt(len(theta_values[1]))
 
                 if l1 == l3:
                     if l1 == 1:
                         coeff = 8 * np.pi * gamma / (ETA ** 2)
-                        unc = 8 * np.pi * gamma_unc / (ETA ** 2)
                     elif l1 == 2:
                         coeff = 40 * np.pi * gamma
-                        unc = 40 * np.pi * gamma_unc
                 else:
                     coeff = -8 * np.pi * np.sqrt(5) * gamma / ETA
-                    unc = 8 * np.pi * np.sqrt(5) * gamma_unc / ETA
 
-                # Symmetrize under index exchange
-                key1 = (l1, m1, l3, m3)
-                key2 = (l3, m3, l1, m1)
-                if key2 in C_coefficients:
-                    coeff = 0.5 * (coeff + C_coefficients[key2])
-                    unc = 0.5 * (unc + C_unc[key2])
+                C_coefficients[(l1, m1, l3, m3)] = coeff
 
-                C_coefficients[key1] = coeff
-                C_coefficients[key2] = coeff
-                C_unc[key1] = unc
-                C_unc[key2] = unc
-
-    return A_coefficients, C_coefficients, A_unc, C_unc
+    return A_coefficients, C_coefficients
 
 def save_coefficients(A_coefficients, C_coefficients, alpha_values, gamma_values, ZZ_path):
     """
@@ -236,9 +218,89 @@ def read_masked_data(cos_psi_data, ZZ_inv_mass, psi_range, mass_range):
     """
     return (cos_psi_data > psi_range[0]) & (cos_psi_data < psi_range[1]) & (ZZ_inv_mass > mass_range[0]) & (ZZ_inv_mass < mass_range[1])
 
-def main():
-    A_coefficients, C_coefficients, alpha_values, gamma_values = calculate_coefficients_AC(cos_theta_paths, phi_paths)
-    save_coefficients(A_coefficients, C_coefficients, alpha_values, gamma_values, ZZ_path)
+def find_nonzero_trace_terms(O, threshold=1e-5):
+    non_zero_A1 = []
+    non_zero_A3 = []
+    non_zero_C = []
 
-#main()
+    I = np.identity(3)
+
+    for l in l_values:
+        for m in m_values[l]:
+            T_op = T1_operators[m] if l == 1 else T2_operators[m]
+            trace_value = np.trace(np.dot(O, np.kron(T_op, I)))
+            if abs(trace_value) > threshold:
+                non_zero_A1.append((l, m, trace_value))
+            trace_value = np.trace(np.dot(O, np.kron(I, T_op)))
+            if abs(trace_value) > threshold:
+                non_zero_A3.append((l, m, trace_value))
+
+    for (l1, l3) in [(1, 1), (2, 2), (1, 2), (2, 1)]:
+        for m1 in m_values[l1]:
+            for m3 in m_values[l3]:
+                T1_op = T1_operators[m1] if l1 == 1 else T2_operators[m1]
+                T3_op = T1_operators[m3] if l3 == 1 else T2_operators[m3]
+                trace_value = np.trace(np.dot(O, np.kron(T1_op, T3_op)))
+                if abs(trace_value) > threshold:
+                    non_zero_C.append((l1, m1, l3, m3, trace_value))
+
+    return non_zero_A1, non_zero_A3, non_zero_C
+
+def calculate_variance_AC(theta_paths, phi_paths, O):
+    """
+    Calculate the variance of the Bell operator
+    """
+    # Load data
+    theta_values = {1: np.loadtxt(theta_paths[1]), 3: np.loadtxt(theta_paths[3])}
+    phi_values = {1: np.loadtxt(phi_paths[1]), 3: np.loadtxt(phi_paths[3])}
+    n_samples = len(theta_values[1])
+
+    non_zero_A1, non_zero_A3, non_zero_C = find_nonzero_trace_terms(O)
+
+    # Build coefficient matrix and trace vector
+    coeff_columns = []
+    trace_vector = []
+
+    for (l, m, trace_value) in non_zero_A1:
+        if l == 1:
+            const = -np.sqrt(8 * np.pi) / ETA 
+        else:
+            const = np.sqrt(40 * np.pi)
+        A_coeff = const * sph_harm_y(l, m, theta_values[1], phi_values[1])
+        coeff_columns.append(A_coeff)
+        trace_vector.append(trace_value)
+
+    for (l, m, trace_value) in non_zero_A3:
+        if l == 1:
+            const = -np.sqrt(8 * np.pi) / ETA 
+        else:
+            const = np.sqrt(40 * np.pi)
+        A_coeff = const * sph_harm_y(l, m, theta_values[3], phi_values[3])
+        coeff_columns.append(A_coeff)
+        trace_vector.append(trace_value)
+
+    for (l1, m1, l3, m3, trace_value) in non_zero_C:
+        if l1 == l3:
+            if l1 == 1:
+                const = 8 * np.pi / (ETA ** 2)
+            else:
+                const = 40 * np.pi
+        else:
+            const = -8 * np.pi * np.sqrt(5) / ETA
+
+        C_coeff = const * sph_harm_y(l1, m1, theta_values[1], phi_values[1]) * sph_harm_y(l3, m3, theta_values[3], phi_values[3])
+        coeff_columns.append(C_coeff)
+        trace_vector.append(trace_value)
+
+    # Stack coefficients into a matrix
+    coeff_matrix = np.column_stack(coeff_columns)
+    trace_vector = np.array(trace_vector) / 9
+
+    # Covariance matrix
+    covariance_matrix = np.cov(coeff_matrix, rowvar=False) / n_samples
+
+    # Variance
+    variance = np.conj(trace_vector.T) @ covariance_matrix @ trace_vector
+
+    return variance
 
