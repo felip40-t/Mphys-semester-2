@@ -41,7 +41,7 @@ Key theoretical components implemented:
   - Gell-Mann basis expansion
 - Lower bound on concurrence:
 
-  $C_LB² = 2 max(0, Tr(ρ²) − Tr(ρ_A²), Tr(ρ²) − Tr(\rho_B^2))$
+  $\mathcal{C}_{LB}^2 = 2 \, \mathrm{max} \, (0, \,\mathrm{Tr}\{\rho^2\} - \mathrm{Tr}\{\rho_A^2\}, \, \mathrm{Tr}\{\rho^2\} - \mathrm{Tr}\{\rho_B^2\})$
 
 - Bell operator for qutrit systems (CGLMP inequality)
 - Phase-space dependent entanglement analysis
