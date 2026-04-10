@@ -91,6 +91,72 @@ Orchestrate the full pipeline over a 2D phase-space grid (M_VV × cosΘ). For ea
 
 ---
 
+## MadGraph5 Installation
+
+MadGraph5_aMC@NLO (v3.5.6) is required for Monte Carlo event generation. The scripts in this repository call MadGraph5 via hardcoded absolute paths, so the install location must be noted and updated accordingly.
+
+### 1. Download and unpack
+
+```bash
+wget https://launchpad.net/mg5amcnlo/3.0/3.5.x/+download/MG5_aMC_v3.5.6.tar.gz
+tar -xzf MG5_aMC_v3.5.6.tar.gz
+```
+
+Place the unpacked directory wherever you prefer (e.g. `~/MG5_aMC_v3_5_6/`).
+
+### 2. Dependencies
+
+MadGraph5 requires Python 3 and the following system packages:
+
+```bash
+# Debian/Ubuntu
+sudo apt install gfortran g++ python3 python3-six
+```
+
+Optional but recommended for LO+PS runs: install `pythia8` and `lhapdf6` from within the MadGraph5 shell (see step 4).
+
+### 3. Verify the installation
+
+```bash
+cd MG5_aMC_v3_5_6
+python3 bin/mg5_aMC
+```
+
+You should see the `MG5_aMC>` prompt.
+
+### 4. Generate the processes used in this project
+
+From the MadGraph5 interactive shell:
+
+```
+# ZZ → 4ℓ
+generate p p > e+ e- mu+ mu-
+output ZZ_4l
+launch ZZ_4l
+
+# W⁺W⁻ → ℓνℓν
+generate p p > e+ ve mu- vm~
+output WW_lvlv
+launch WW_lvlv
+```
+
+Select `LO` (leading order) and use the default `RunCard` settings, or copy the run cards used in previous generation runs (stored under `Events/` in the process directory).
+
+### 5. Update hardcoded paths
+
+After installation, update the MadGraph5 path in the event-generation scripts to match your local install:
+
+```python
+# In automate_event_gen.py and automate_event_gen_ww.py, replace:
+MG5_PATH = "/home/felipetcach/project/MG5_aMC_v3_5_6/"
+# with your actual path, e.g.:
+MG5_PATH = "/home/<your_username>/MG5_aMC_v3_5_6/"
+```
+
+The generated LHE files (`.lhe` or `.lhe.gz`) are then passed to the `lhe_reading_*.py` scripts to begin the analysis pipeline.
+
+---
+
 ## Physics Scope
 
 Processes studied:
