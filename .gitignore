@@ -1,0 +1,35 @@
+# Virtual environment
+.venv/
+
+# CLAUDE.md
+CLAUDE.md
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Data and output files
+*.lhe
+*.lhe.gz
+*.root
+*.npy
+*.npz
+
+# Plots
+*.png
+*.pdf
+*.svg
+
+# VS Code / Visual Studio
+.vscode/
+.vs/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Misc
+*.log
+grid.txt
+
+# Archived scripts (kept locally, not tracked)
+old/
