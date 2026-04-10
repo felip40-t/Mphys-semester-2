@@ -10,7 +10,7 @@ University of Manchester
 
 ## Overview
 
-This repository contains the analysis framework used to reconstruct spin density matrices of electroweak boson pairs (ZZ and W⁺W⁻) produced in proton–proton collisions at √s = 13 TeV, and to evaluate quantum entanglement observables.
+This repository contains the analysis framework used to reconstruct spin density matrices of electroweak boson pairs (ZZ and W⁺W⁻) produced in proton–proton collisions at √s = 13 TeV, and to evaluate quantum entanglement observables. Full project report available in this repo (University of Manchester MPhys, 2025).
 
 The analysis pipeline:
 
@@ -159,23 +159,40 @@ The generated LHE files (`.lhe` or `.lhe.gz`) are then passed to the `lhe_readin
 
 ## Physics Scope
 
-Processes studied:
+## Physics Scope
 
-- `pp → e⁺e⁻ μ⁺μ⁻`  (ZZ)
-- `pp → e⁺νₑ μ⁻ν̄_μ` (W⁺W⁻)
+This project investigates quantum entanglement in bipartite systems of electroweak (EW) bosons — specifically ZZ and W⁺W⁻ pairs produced at the LHC via pp collisions at √s = 13 TeV. Monte Carlo events are generated with MadGraph5 and the spin density matrices are reconstructed from the angular distributions of fully leptonic decay products.
 
-Key theoretical components implemented:
+### Density Matrix Reconstruction
 
-- Density matrix reconstruction via:
-  - Irreducible Tensor Operator (ITO) parametrisation
-  - Gell-Mann basis expansion
-- Lower bound on concurrence:
+The spin density matrix ρ encodes the full quantum state of the diboson system. Two parametrisations are used:
 
-  $\mathcal{C}_{LB}^2 = 2 \mathrm{max} (0,\mathrm{Tr}\{\rho^2\} - \mathrm{Tr}\{\rho_A^2\}, \mathrm{Tr}\{\rho^2\} - \mathrm{Tr}\{\rho_B^2\})$
+- **ITO (Irreducible Tensor Operator) parametrisation** for ZZ, expanding ρ in rank-l tensor operators Tˡₘ:
 
-- Bell operator for qutrit systems (CGLMP inequality)
-- Phase-space dependent entanglement analysis
-- Eigenvalue clipping via Higham projection
-- Covariance-based uncertainty propagation
+$$\rho = \frac{1}{9}\left[\mathbf{1}_3 \otimes \mathbf{1}_3 + \sum A^{(1)}_{l,m} T^l_m \otimes \mathbf{1}_3 + \sum A^{(3)}_{l,m} \mathbf{1}_3 \otimes T^l_m + \sum C_{l_1,m_1,l_3,m_3} T^{l_1}_{m_1} \otimes T^{l_3}_{m_3}\right]$$
 
----
+- **Gell-Mann basis** for W⁺W⁻, expanding ρ in the SU(3) generators λᵢ:
+
+$$\rho = \frac{1}{9}\mathbf{1}_3\otimes\mathbf{1}_3 + \frac{1}{3}\sum_i f_i\,\lambda_i\otimes\mathbf{1}_3 + \frac{1}{3}\sum_j g_j\,\mathbf{1}_3\otimes\lambda_j + \sum_{i,j} h_{ij}\,\lambda_i\otimes\lambda_j$$
+
+Coefficients are extracted as expectation values of spherical harmonics (ITO) or projector functions πᵢ± (Gell-Mann) over the lepton decay angles, defined in the modified helicity frame of the ATLAS collaboration.
+
+### Quantum Observables
+
+**Concurrence lower bound** — quantifies entanglement in mixed bipartite states:
+
+$$\mathcal{C}^2_{LB} = 2\max\!\left(0,\,\mathrm{Tr}\{\rho^2\} - \mathrm{Tr}\{\rho_A^2\},\,\mathrm{Tr}\{\rho^2\} - \mathrm{Tr}\{\rho_B^2\}\right)$$
+
+A non-zero value certifies entanglement.
+
+**CGLMP Bell inequality** — generalises the CHSH inequality to qutrit (spin-1) systems:
+
+$$\mathcal{I}_3 = \langle\mathcal{O}_B\rangle = \mathrm{Tr}\{\rho\,\mathcal{O}_B\} \leq 2$$
+
+The Bell operator is optimised over unitary rotations U, V ∈ U(3) to maximise violation. Its initial form is:
+
+$$\mathcal{O}'_B = -\frac{2}{\sqrt{3}}\left(S_x\otimes S_x + S_y\otimes S_y\right) + \lambda_4\otimes\lambda_4 + \lambda_5\otimes\lambda_5$$
+
+### Phase Space & Validity
+
+Observables are mapped across the diboson kinematic plane ($$M_VV$$, cos Θ). Reconstructed density matrices are projected to the nearest positive semi-definite state via Higham projection when negative eigenvalues arise. Uncertainties on Bell operator values are propagated via the full covariance matrix of density matrix coefficients.
