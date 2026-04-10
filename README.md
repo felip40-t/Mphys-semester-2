@@ -29,9 +29,51 @@ This work probes entanglement in high-energy physics systems and tests Bell-type
 
 ## Code Structure
 
-The codebase is organised into three parallel analysis tracks — **ZZ**, **WW**, and **WZ** — each following the same pipeline from LHE parsing through to entanglement observables. A set of process-independent core modules handles the quantum state calculations that are shared across all tracks.
+The codebase is organised into five directories. Process-independent quantum-state calculations live in `core/`; per-process analysis tracks are in `ZZ/`, `WW/`, and `WZ/`; event generation scripts are in `event_gen/`; and shared plotting utilities live in `utils/`.
 
-### Core Modules
+```
+Mphys-semester-2/
+├── core/                          # Process-independent physics modules
+│   ├── density_matrix_calculator.py
+│   ├── Bell_inequality_optimizer.py
+│   ├── concurrence_bound.py
+│   └── Unitary_Matrix.py
+│
+├── ZZ/                            # ZZ → e⁺e⁻μ⁺μ⁻ analysis track
+│   ├── lhe_reading_ZZ.py
+│   ├── lorentz_boost_zz.py
+│   ├── coefficient_calculator_ZZ.py
+│   ├── main_bell_ZZ.py            # ← entry point
+│   ├── zz_fracs_calc.py
+│   ├── zz_params_calc.py
+│   ├── zz_reconst.py
+│   ├── zz_histo.py
+│   └── plot_histo_fortran_zz.py
+│
+├── WW/                            # W⁺W⁻ → e⁺νₑμ⁻ν̄_μ analysis track
+│   ├── lhe_reading_WW.py
+│   ├── lorentz_boost_ww.py
+│   ├── coefficient_calculator_WW.py
+│   ├── main_bell_WW.py            # ← entry point
+│   └── ww_fracs_calc.py
+│
+├── WZ/                            # WZ analysis track (in development)
+│   ├── lhe_reading_WZ.py
+│   ├── lorentz_boost_wz.py
+│   ├── wz_fracs_calc.py
+│   ├── wz_theta_hist.py
+│   └── plot_histo_fortran_wz.py
+│
+├── event_gen/                     # MadGraph5 automation scripts
+│   ├── automate_event_gen.py      # ZZ event generation
+│   └── automate_event_gen_ww.py   # WW event generation
+│
+└──  utils/                         # Shared plotting utilities
+    ├── histo_plotter.py
+    └── inv_mass_histo.py
+```
+
+### `core/` — Shared Physics Modules
 
 #### `density_matrix_calculator.py`
 Defines all operator bases and constructs the 9×9 bipartite qutrit density matrix.
@@ -65,7 +107,7 @@ Maximises the CGLMP Bell inequality expectation value over all local unitary rot
 
 ### Per-Process Modules
 
-Each track (ZZ/WW/WZ) has equivalent modules at each pipeline stage:
+Each track (`ZZ/`, `WW/`, `WZ/`) contains equivalent modules at each pipeline stage:
 
 #### LHE Parsing — `lhe_reading_ZZ.py`, `lhe_reading_WW.py`, `lhe_reading_WZ.py`
 Read MadGraph5 LHE event files using `pylhe`, extract lepton 4-momenta, and organise events by particle type.
@@ -86,7 +128,7 @@ Extract density matrix coefficients from lepton angular distributions by project
 - `calculate_variance_AC` / `calculate_variance_fgh` — propagate statistical uncertainties on the Bell operator expectation value via a covariance matrix built from the per-event projector values
 - `read_masked_data(cos_psi, inv_mass, psi_range, mass_range)` — returns a boolean mask selecting events in a given (cosΘ, M_VV) phase-space bin
 
-#### Main Analysis Scripts — `main_bell_ZZ.py`, `main_bell_WW.py`
+#### Main Analysis Scripts — `ZZ/main_bell_ZZ.py`, `WW/main_bell_WW.py`
 Orchestrate the full pipeline over a 2D phase-space grid (M_VV × cosΘ). For each bin they reconstruct ρ, apply PSD projection, compute the concurrence lower bound and Bell inequality value with uncertainties, and produce Gaussian-smoothed 2D heatmap plots.
 
 ---
