@@ -1,14 +1,12 @@
 import os 
 import sys
 import subprocess
-import trace
 import pylhe
 import numpy as np
-from lorentz_boost_zz import boostinvp, calc_inv_mass, calc_scattering_angle, phistar
+from ZZ.lorentz_boost_zz import boostinvp, calc_inv_mass, calc_scattering_angle, phistar
 import glob
 from multiprocessing import Pool
-import traceback
-import logging
+
 
 def run_madgraph(mg5_install_dir, process_dir, energy, nevents):
     """

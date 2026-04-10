@@ -2,12 +2,12 @@
 from matplotlib.colors import ListedColormap
 import numpy as np
 import os
-from histo_plotter import read_data
+from utils.histo_plotter import read_data
 from coefficient_calculator_WW import calculate_coefficients, read_masked_data, calculate_coefficients_fgh, calculate_variance_fgh
-from density_matrix_calculator import calculate_density_matrix_AC, O_bell_prime1, calculate_density_matrix_fgh, project_to_psd, unphysicality_score
-from Bell_inequality_optimizer import bell_inequality_optimization, inequality_function, optimal_bell_operator
-from Unitary_Matrix import euler_unitary_matrix
-from concurrence_bound import concurrence_lower, check_density_matrix, concurrence_MB
+from core.density_matrix_calculator import calculate_density_matrix_AC, O_bell_prime1, calculate_density_matrix_fgh, project_to_psd, unphysicality_score
+from core.Bell_inequality_optimizer import bell_inequality_optimization, inequality_function, optimal_bell_operator
+from core.Unitary_Matrix import euler_unitary_matrix
+from core.concurrence_bound import concurrence_lower, check_density_matrix, concurrence_MB
 import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter
 from matplotlib.colors import LinearSegmentedColormap

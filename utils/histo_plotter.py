@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-from lhe_reading_WW import find_latest_run_dir
+from WW.lhe_reading_WW import find_latest_run_dir
 
 process_dir = "/home/felipetcach/project/MG5_aMC_v3_5_6/4_lepton_process"
 base_dir = os.path.join(process_dir, "Events")

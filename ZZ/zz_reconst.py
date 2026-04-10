@@ -1,7 +1,7 @@
 import os
 import numpy as np
-from lhe_reading_WZ import find_latest_run_dir
-from histo_plotter import read_data
+from lhe_reading_ZZ import find_latest_run_dir
+from utils.histo_plotter import read_data
 
 # Update the MadGraph5 directory and process directory
 mg5_install_dir = "/home/felipetcach/project/MG5_aMC_v3_5_6"

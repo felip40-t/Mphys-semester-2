@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.optimize import differential_evolution
-from Unitary_Matrix import euler_unitary_matrix
+from core.Unitary_Matrix import euler_unitary_matrix
 
 def optimal_bell_operator(O_bell_prime, parameters):
         """

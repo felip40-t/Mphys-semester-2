@@ -1,7 +1,7 @@
 import os
 import numpy as np
 from lhe_reading_WW import find_latest_run_dir
-from histo_plotter import read_data
+from utils.histo_plotter import read_data
 
 mg5_install_dir = "/home/felipetcach/project/MG5_aMC_v3_5_6"
 process_dir = os.path.join(mg5_install_dir, "pp_WW_SM")

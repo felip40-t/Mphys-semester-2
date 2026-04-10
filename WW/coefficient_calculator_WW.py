@@ -2,8 +2,8 @@ import numpy as np
 import os
 import csv
 from scipy.special import sph_harm_y
-from histo_plotter import read_data
-from density_matrix_calculator import lambda_operators
+from utils.histo_plotter import read_data
+from core.density_matrix_calculator import lambda_operators
 
 # Constants
 ETA = 1

@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from histo_plotter import read_data
+from utils.histo_plotter import read_data
 
 # Base path for WZ data
 ZZ_path = "/home/felipetcach/project/MG5_aMC_v3_5_6/ZZ_process/Plots and data"

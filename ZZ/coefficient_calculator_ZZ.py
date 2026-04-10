@@ -3,8 +3,8 @@ import numpy as np
 import os
 import csv
 from scipy.special import sph_harm_y
-from histo_plotter import read_data
-from density_matrix_calculator import T1_operators, T2_operators
+from utils.histo_plotter import read_data
+from core.density_matrix_calculator import T1_operators, T2_operators
 
 ZZ_path = "/home/felipetcach/project/MG5_aMC_v3_5_6/pp_ZZ_SM/Plots and data"
 # Read theta and phi values for both datasets
