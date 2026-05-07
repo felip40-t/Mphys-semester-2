@@ -2,8 +2,9 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from WW.lhe_reading_WW import find_latest_run_dir
+from config import FOUR_LEPTON_PROCESS_DIR
 
-process_dir = "/home/felipetcach/project/MG5_aMC_v3_5_6/4_lepton_process"
+process_dir = str(FOUR_LEPTON_PROCESS_DIR)
 base_dir = os.path.join(process_dir, "Events")
 
 particle_directories = {

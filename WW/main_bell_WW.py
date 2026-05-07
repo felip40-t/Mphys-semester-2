@@ -11,10 +11,11 @@ from core.concurrence_bound import concurrence_lower, check_density_matrix, conc
 import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter
 from matplotlib.colors import LinearSegmentedColormap
+from config import WW_ORGANISED_DATA, WW_PLOTS_DIR
 
 
-WW_path = "/home/felipetcach/project/MG5_aMC_v3_5_6/pp_WW_4l_final_process/Plots and data/organised_data"
-WW_save = "/home/felipetcach/project/MG5_aMC_v3_5_6/pp_WW_4l_final_process/Plots and data/Plots"
+WW_path = str(WW_ORGANISED_DATA)
+WW_save = str(WW_PLOTS_DIR)
 
 regions = { 
         (i, j): [(cos_min, cos_min + 0.1), (mass_min, mass_min + 50.0)]

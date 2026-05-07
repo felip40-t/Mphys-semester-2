@@ -1,26 +1,22 @@
 
-import re 
+import re
 import os
 import subprocess
 
-mg5_install_dir = "/home/felipetcach/project/MG5_aMC_v3_5_6"
-process_dir = os.path.join(mg5_install_dir, "pp_WW_SM")
+from config import MG5_INSTALL_DIR
+
+mg5_install_dir = str(MG5_INSTALL_DIR)
+process_dir = os.path.join(mg5_install_dir, "pp_ZZ_SM")
 
 # Path to Fortran source file
 fortran_dummy_fct = os.path.join(process_dir, "SubProcesses", "dummy_fct.f")
 
-# Define regions of phase space for (0.0 to 1.0) and (200.0 to 900.0)
+# Define regions of phase space for (0.0 to 1.0) and (200.0 to 1000.0)
 regions = [
     [(cos_min, cos_min + 0.1), (mass_min, mass_min + 50.0)]
     for cos_min in [0.0 + 0.1 * i for i in range(9)]
-    for mass_min in [200.0 + 50.0 * j for j in range(14)]
+    for mass_min in [200.0 + 50.0 * j for j in range(16)]
 ]
-
-regions += [
-    [(0.9, 0.95), (mass_min, mass_min + 50.0)]
-    for mass_min in [200.0 + 50.0 * i for i in range(14)]
-]
-
 
 # Function to modify Fortran file
 def modify_fortran_file(file_path, limits):

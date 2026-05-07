@@ -5,8 +5,9 @@ import csv
 from scipy.special import sph_harm_y
 from utils.histo_plotter import read_data
 from core.density_matrix_calculator import T1_operators, T2_operators
+from config import ZZ_DATA_DIR
 
-ZZ_path = "/home/felipetcach/project/MG5_aMC_v3_5_6/pp_ZZ_SM/Plots and data"
+ZZ_path = str(ZZ_DATA_DIR)
 # Read theta and phi values for both datasets
 cos_theta_paths = {
     1: os.path.join(ZZ_path, "mu+/theta_data_combined.txt"),

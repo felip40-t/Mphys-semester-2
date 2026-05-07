@@ -1,9 +1,10 @@
 import os
 import numpy as np
 from utils.histo_plotter import read_data
+from config import ZZ_DATA_DIR_LEGACY
 
-# Base path for WZ data
-ZZ_path = "/home/felipetcach/project/MG5_aMC_v3_5_6/ZZ_process/Plots and data"
+# Base path for ZZ data
+ZZ_path = str(ZZ_DATA_DIR_LEGACY)
 
 # Data file names for ZZ process
 ZZ_files = ["theta_data_9.txt"]

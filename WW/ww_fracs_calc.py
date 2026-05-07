@@ -1,9 +1,10 @@
 import os
 import numpy as np
 from utils.histo_plotter import read_data
+from config import WW_DATA_DIR
 
-# Base path for WZ data
-WW_path = "/home/felipetcach/project/MG5_aMC_v3_5_6/pp_WW_SM/Plots and data"
+# Base path for WW data
+WW_path = str(WW_DATA_DIR)
 
 
 # Function to calculate all parameters for WZ datasets

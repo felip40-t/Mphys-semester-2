@@ -468,7 +468,8 @@ def combine_files(reorganised_path):
 
 
 def main():
-    mg5_install_dir = "/home/felipetcach/project/MG5_aMC_v3_5_6"
+    from config import MG5_INSTALL_DIR
+    mg5_install_dir = str(MG5_INSTALL_DIR)
     process_dir1 = os.path.join(mg5_install_dir, "Felipe_pp_WW_4l")
     process_dir2 = os.path.join(mg5_install_dir, "pp_WW_4l_final_process")
     events_dir = os.path.join(process_dir1, "Events")

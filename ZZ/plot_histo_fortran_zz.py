@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+from config import ZZ_FORTRAN_REF_DIR, ZZ_DATA_DIR
 
 # Function to read data from the file
 def read_data(filepath):
@@ -95,7 +96,7 @@ def plot_combined_histogram(hwU_data, phi_values_e_plus, filepath):
     path = os.path.join(filepath, "phi_hist_comparison_fortran_mu+_zz_run4.pdf")
     plt.savefig(path)
 
-file_path = os.path.join("/home/felipetcach/project/MG5_aMC_v3_5_6/pp_4l_zz_LOonly/Events/run_04_LO", "MADatNLO.HwU")
+file_path = os.path.join(str(ZZ_FORTRAN_REF_DIR), "Events/run_04_LO", "MADatNLO.HwU")
 target_histogram = 'phi st mp T INC    LONP0'
 
 # Parse the .HwU file for the desired histogram
@@ -103,13 +104,13 @@ parsed_hwU_data = parse_hwU_file(file_path, target_histogram)
 
 # Read e+ data for Python
 wz_process = {
-    "base_path": "/home/felipetcach/project/MG5_aMC_v3_5_6/pp_ZZ_SM/Plots and data",
+    "base_path": str(ZZ_DATA_DIR),
     "particles": {"mu+": "mu+/phi_data_4.txt"},
 }
 phi_values_e_plus = read_data(os.path.join(wz_process["base_path"], wz_process["particles"]["mu+"]))
 
 # Plot the combined histogram (Fortran and Python)
-plot_combined_histogram(parsed_hwU_data, phi_values_e_plus, "/home/felipetcach/project/MG5_aMC_v3_5_6/pp_4l_zz_LOonly")
+plot_combined_histogram(parsed_hwU_data, phi_values_e_plus, str(ZZ_FORTRAN_REF_DIR))
 
 # Model function
 def model_function(phi,a22):

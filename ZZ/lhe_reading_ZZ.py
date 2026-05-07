@@ -515,7 +515,8 @@ def read_and_boost_single_run(run_dir, output_dir):
         print(f"Error writing output files: {e}")
 
 def main():
-    mg5_install_dir = "/home/felipetcach/project/MG5_aMC_v3_5_6"
+    from config import MG5_INSTALL_DIR
+    mg5_install_dir = str(MG5_INSTALL_DIR)
     process_dir = os.path.join(mg5_install_dir, "pp_ZZ_SM")
     events_dir = os.path.join(process_dir, "Events")
     run_dir = os.path.join(events_dir, "run_453")

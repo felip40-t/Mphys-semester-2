@@ -9,9 +9,10 @@ from core.concurrence_bound import concurrence_lower, check_density_matrix
 import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter
 from matplotlib.colors import LinearSegmentedColormap
+from config import ZZ_REORGANISED_DATA, ZZ_ENTANGLEMENT_PLOTS
 
-ZZ_path = "/home/felipetcach/project/MG5_aMC_v3_5_6/pp_ZZ_SM/Plots and data/reorganised_data"
-ZZ_save = "/home/felipetcach/project/MG5_aMC_v3_5_6/pp_ZZ_SM/Plots and data/reorganised_data/Entanglement plots"
+ZZ_path = str(ZZ_REORGANISED_DATA)
+ZZ_save = str(ZZ_ENTANGLEMENT_PLOTS)
 
 regions = { 
         (i, j): [(cos_min, cos_min + 0.1), (mass_min, mass_min + 50.0)]

@@ -5,7 +5,8 @@ from WW.lhe_reading_WW import find_latest_run_dir
 from utils.histo_plotter import read_data
 
 # Update the MadGraph5 directory and process directory to ZZ_process
-mg5_install_dir = "/home/felipetcach/project/MG5_aMC_v3_5_6"
+from config import MG5_INSTALL_DIR
+mg5_install_dir = str(MG5_INSTALL_DIR)
 process_dir = os.path.join(mg5_install_dir, "pp_ZZ_SM")  # Updated process directory
 base_dir = os.path.join(process_dir, "Events")
 
