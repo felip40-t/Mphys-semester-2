@@ -5,8 +5,7 @@ from utils.histo_plotter import read_data
 from config import MG5_INSTALL_DIR
 
 # Update the MadGraph5 directory and process directory
-mg5_install_dir = str(MG5_INSTALL_DIR)
-process_dir = os.path.join(mg5_install_dir, "pp_ZZ_fiducial")  # Updated process directory
+process_dir = os.path.join(MG5_INSTALL_DIR, "pp_ZZ_fiducial")  # Updated process directory
 base_dir = os.path.join(process_dir, "Events")
 
 _, run_number = find_latest_run_dir(base_dir)

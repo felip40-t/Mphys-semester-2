@@ -3,6 +3,7 @@
 
 # CLAUDE.md
 CLAUDE.md
+plan.md
 
 # Python cache
 __pycache__/
@@ -16,6 +17,7 @@ __pycache__/
 *.npz
 *.csv
 *.json
+outputs/
 
 # Plots
 *.png

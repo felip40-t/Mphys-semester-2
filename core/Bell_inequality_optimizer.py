@@ -25,15 +25,22 @@ def inequality_function_pseudo(parameters, density_matrix, O_bell_prime):
         bell_inequality = np.trace(density_matrix @ O_bell)
         return - np.real(bell_inequality)
 
-def bell_inequality_optimization(density_matrix, O_bell_prime):
+def bell_inequality_optimization(density_matrix, O_bell_prime, seed=0):
     """
     Perform the optimization procedure to maximize the Bell inequality.
+
+    seed: passed to differential_evolution. Pass seed=None for non-deterministic
+    behaviour matching the original code.
     """
     bounds = [(0, 2 * np.pi)] * 12  # Define bounds for the parameters
 
     # Enable parallelization by setting workers=-1 in differential_evolution
-    result = differential_evolution(inequality_function_pseudo, bounds, args=(density_matrix, O_bell_prime), workers=-1)
+    result = differential_evolution(
+        inequality_function_pseudo, bounds,
+        args=(density_matrix, O_bell_prime),
+        workers=-1, seed=seed,
+    )
     optimal_params = result.x
-    bell_value = - result.fun
+    bell_value = -result.fun
 
     return bell_value, optimal_params

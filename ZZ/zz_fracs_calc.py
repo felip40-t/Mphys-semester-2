@@ -3,8 +3,7 @@ import numpy as np
 from utils.histo_plotter import read_data
 from config import ZZ_DATA_DIR
 
-# Base path for ZZ data
-ZZ_PATH = str(ZZ_DATA_DIR)
+ZZ_PATH = ZZ_DATA_DIR
 
 # Function to calculate all parameters for ZZ datasets
 def calculate_parameters(data1, data3, phi_data1, phi_data3):

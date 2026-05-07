@@ -1,13 +1,17 @@
-from matplotlib.pylab import f
 import numpy as np
 import os
 import csv
 from scipy.special import sph_harm_y
 from utils.histo_plotter import read_data
 from core.density_matrix_calculator import T1_operators, T2_operators
-from config import ZZ_DATA_DIR
+from config import ZZ_DATA_DIR  # also bootstraps src/ onto sys.path
+from diboson.physics.projectors import (
+    plus_minus, projector_1, projector_2, projector_3, projector_4,
+    projector_5, projector_6, projector_7, projector_8, projector_vector,
+    read_masked_data,
+)
 
-ZZ_path = str(ZZ_DATA_DIR)
+ZZ_path = ZZ_DATA_DIR
 # Read theta and phi values for both datasets
 cos_theta_paths = {
     1: os.path.join(ZZ_path, "mu+/theta_data_combined.txt"),
@@ -34,67 +38,6 @@ a_matrix = ( 1 / (g_R**2 - g_L**2) ) * np.array([[g_R**2, 0, 0, 0, 0, g_L**2, 0,
                                                  [g_L**2, 0, 0, 0, 0, g_R**2, 0, 0], 
                                                  [0, g_L**2, 0, 0, 0, 0, g_R**2, 0], 
                                                  [0, 0, (np.sqrt(3)/2) * g_L**2, 0, 0, 0, 0, 0.5 * g_L**2 - g_R**2] ])
-
-# Helper function to determine if it's plus or minus based on dataset value
-def plus_minus(dataset):
-    if dataset == 1:
-        return +1
-    elif dataset == 3:
-        return -1
-
-# Projector 1
-def projector_1(theta, phi, dataset):
-    value = np.sqrt(2) * np.sin(theta) * (5 * np.cos(theta) + plus_minus(dataset) * 1) * np.cos(phi)
-    return value
-
-# Projector 2
-def projector_2(theta, phi, dataset):
-    value = np.sqrt(2) * np.sin(theta) * (5 * np.cos(theta) + plus_minus(dataset) * 1) * np.sin(phi)
-    return value
-
-# Projector 3
-def projector_3(theta, phi, dataset):
-    value = (1/4) * (5 + plus_minus(dataset) * 4 * np.cos(theta) + 15 * np.cos(2*theta))
-    return value
-
-# Projector 4
-def projector_4(theta, phi, dataset):
-    return 5 * np.sin(theta)**2 * np.cos(2 * phi)
-
-# Projector 5
-def projector_5(theta, phi, dataset):
-    return 5 * np.sin(theta)**2 * np.sin(2 * phi)
-
-# Projector 6
-def projector_6(theta, phi, dataset):
-    value = np.sqrt(2) * np.sin(theta) * (-5 * np.cos(theta) + plus_minus(dataset) * 1) * np.cos(phi)
-    return value
-
-# Projector 7
-def projector_7(theta, phi, dataset):
-    value = np.sqrt(2) * np.sin(theta) * (-5 * np.cos(theta) + plus_minus(dataset) * 1) * np.sin(phi)
-    return value
-
-# Projector 8
-def projector_8(theta, phi, dataset):
-    value = (1 / (4 * np.sqrt(3))) * (-5 + plus_minus(dataset) * 12 * np.cos(theta) - 15 * np.cos(2*theta))
-    return value
-
-# Define the vector of projectors
-def projector_vector(theta, phi, dataset):
-    # Call each projector function and store their results in a list or array
-    vector = np.array([
-        projector_1(theta, phi, dataset),
-        projector_2(theta, phi, dataset),
-        projector_3(theta, phi, dataset),
-        projector_4(theta, phi, dataset),
-        projector_5(theta, phi, dataset),
-        projector_6(theta, phi, dataset),
-        projector_7(theta, phi, dataset),
-        projector_8(theta, phi, dataset)
-    ])
-    return vector
-
 
 def calculate_coefficients_fgh(theta_paths, phi_paths, mask=None):
     """
@@ -212,12 +155,6 @@ def save_coefficients(A_coefficients, C_coefficients, alpha_values, gamma_values
         writer.writerow(["l1", "m1", "l3", "m3", "gamma"])
         for (l1, m1, l3, m3), gamma_value in gamma_values.items():
             writer.writerow([l1, m1, l3, m3, gamma_value])
-
-def read_masked_data(cos_psi_data, ZZ_inv_mass, psi_range, mass_range):
-    """
-    Apply a mask based on psi and ZZ invariant mass.
-    """
-    return (cos_psi_data > psi_range[0]) & (cos_psi_data < psi_range[1]) & (ZZ_inv_mass > mass_range[0]) & (ZZ_inv_mass < mass_range[1])
 
 def find_nonzero_trace_terms(O, threshold=1e-5):
     non_zero_A1 = []

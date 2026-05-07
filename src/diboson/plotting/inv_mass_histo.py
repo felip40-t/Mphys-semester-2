@@ -1,13 +1,10 @@
 import os
-from pdb import run
 import numpy as np
-from WW.lhe_reading_WW import find_latest_run_dir
+from diboson.io.run_discovery import find_latest_run_dir
 from utils.histo_plotter import read_data
-
-# Update the MadGraph5 directory and process directory to ZZ_process
 from config import MG5_INSTALL_DIR
-mg5_install_dir = str(MG5_INSTALL_DIR)
-process_dir = os.path.join(mg5_install_dir, "pp_ZZ_SM")  # Updated process directory
+
+process_dir = os.path.join(MG5_INSTALL_DIR, "pp_ZZ_SM")  # Updated process directory
 base_dir = os.path.join(process_dir, "Events")
 
 # Particle directories corresponding to the ZZ process

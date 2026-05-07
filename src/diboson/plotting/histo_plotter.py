@@ -1,10 +1,10 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-from WW.lhe_reading_WW import find_latest_run_dir
-from config import FOUR_LEPTON_PROCESS_DIR
+from diboson.io.run_discovery import find_latest_run_dir
+from config import FOUR_LEPTON_PROCESS_DIR, NEVENTS
 
-process_dir = str(FOUR_LEPTON_PROCESS_DIR)
+process_dir = FOUR_LEPTON_PROCESS_DIR
 base_dir = os.path.join(process_dir, "Events")
 
 particle_directories = {
@@ -14,8 +14,6 @@ particle_directories = {
     'w+': os.path.join(process_dir, "Plots and data/w+"), 
 }
 
-COM_ENERGY = 13_000  # GeV
-NEVENTS = 1_000_000  # Total number of events
 
 def read_data(file_path):
     """

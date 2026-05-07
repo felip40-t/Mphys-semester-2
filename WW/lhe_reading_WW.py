@@ -1,11 +1,12 @@
-import os 
+import os
 import sys
 import subprocess
 import pylhe
 import numpy as np
-from ZZ.lorentz_boost_zz import boostinvp, calc_inv_mass, calc_scattering_angle, phistar
 import glob
 from multiprocessing import Pool
+from config import MG5_INSTALL_DIR  # noqa: F401  also bootstraps src/ onto sys.path
+from diboson.physics.kinematics import boostinvp, calc_inv_mass, calc_scattering_angle, phistar
 
 
 def run_madgraph(mg5_install_dir, process_dir, energy, nevents):
@@ -468,10 +469,8 @@ def combine_files(reorganised_path):
 
 
 def main():
-    from config import MG5_INSTALL_DIR
-    mg5_install_dir = str(MG5_INSTALL_DIR)
-    process_dir1 = os.path.join(mg5_install_dir, "Felipe_pp_WW_4l")
-    process_dir2 = os.path.join(mg5_install_dir, "pp_WW_4l_final_process")
+    process_dir1 = os.path.join(MG5_INSTALL_DIR, "Felipe_pp_WW_4l")
+    process_dir2 = os.path.join(MG5_INSTALL_DIR, "pp_WW_4l_final_process")
     events_dir = os.path.join(process_dir1, "Events")
     save_dir = os.path.join(process_dir2, "Plots and data/organised_data")
 

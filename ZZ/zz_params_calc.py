@@ -3,8 +3,7 @@ import numpy as np
 from utils.histo_plotter import read_data
 from config import ZZ_DATA_DIR_LEGACY
 
-# Base path for ZZ data
-ZZ_path = str(ZZ_DATA_DIR_LEGACY)
+ZZ_path = ZZ_DATA_DIR_LEGACY
 
 # Data file names for ZZ process
 ZZ_files = ["theta_data_9.txt"]
@@ -103,7 +102,7 @@ def calculate_parameters(data1, data2, num_events_1, num_events_2):
         'alpha2_1_uncertainty': 0.25 * np.sqrt(5 / np.pi) * 3 * sigma_cos_sqr_1,
         'alpha2_2_uncertainty': 0.25 * np.sqrt(5 / np.pi) * 3 * sigma_cos_sqr_2,
         #'gamma1010_uncertainty': 0.219 * 0.25 * (3 / np.pi) * sigma_cos_mix, 
-        'gamma2020_uncertainty': (5 / 16*np.pi) * sigma_cos_sqr_mix 
+        'gamma2020_uncertainty': (5 / (16*np.pi)) * sigma_cos_sqr_mix
         }
 
     # Calculate alphas and gammas

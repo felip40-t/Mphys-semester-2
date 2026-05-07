@@ -4,10 +4,11 @@ import subprocess
 import sys
 import pylhe
 import numpy as np
-from coefficient_calculator_ZZ import read_masked_data
 import glob
-from lorentz_boost_zz import boostinvp, calc_inv_mass, calc_scattering_angle, phistar
 import tarfile
+from config import MG5_INSTALL_DIR  # noqa: F401  also bootstraps src/ onto sys.path
+from coefficient_calculator_ZZ import read_masked_data
+from diboson.physics.kinematics import boostinvp, calc_inv_mass, calc_scattering_angle, phistar
 
 
 def run_madgraph(mg5_install_dir, process_dir, energy, nevents):
@@ -515,9 +516,7 @@ def read_and_boost_single_run(run_dir, output_dir):
         print(f"Error writing output files: {e}")
 
 def main():
-    from config import MG5_INSTALL_DIR
-    mg5_install_dir = str(MG5_INSTALL_DIR)
-    process_dir = os.path.join(mg5_install_dir, "pp_ZZ_SM")
+    process_dir = os.path.join(MG5_INSTALL_DIR, "pp_ZZ_SM")
     events_dir = os.path.join(process_dir, "Events")
     run_dir = os.path.join(events_dir, "run_453")
     organised_dir = os.path.join(process_dir, "Plots and data/reorganised_data")

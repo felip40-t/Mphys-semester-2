@@ -3,11 +3,10 @@ import numpy as np
 from utils.histo_plotter import read_data
 from config import WW_DATA_DIR
 
-# Base path for WW data
-WW_path = str(WW_DATA_DIR)
+WW_path = WW_DATA_DIR
 
 
-# Function to calculate all parameters for WZ datasets
+# Function to calculate all parameters for WW datasets
 def calculate_parameters(data1, data3, phi_data1, phi_data3):
     """Calculates all parameters for the WW case using two datasets (mu- and e+)."""
 

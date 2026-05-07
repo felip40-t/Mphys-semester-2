@@ -4,8 +4,7 @@ import matplotlib.pyplot as plt
 from utils.histo_plotter import read_data
 from config import ZZ_DATA_DIR
 
-# Define the base paths for e- and e+ directories
-base_path = str(ZZ_DATA_DIR)
+base_path = ZZ_DATA_DIR
 
 # Define the data directories for e- and e+ angle_data_10
 data_dir_e_plus = os.path.join(base_path, "e+/theta_data_4_new.txt")
