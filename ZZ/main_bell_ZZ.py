@@ -9,13 +9,21 @@ from core.concurrence_bound import concurrence_lower, check_density_matrix
 import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter
 from matplotlib.colors import LinearSegmentedColormap
-from config import ZZ_REORGANISED_DATA, ZZ_ENTANGLEMENT_PLOTS  # also bootstraps src/ onto sys.path
+from config import ZZ_RAW_DIR, ZZ_PROCESSED_DIR, ZZ_PLOTS_DIR  # also bootstraps src/ onto sys.path
 from diboson.plotting.contour import plot_contour_heatmap as _plot_contour_heatmap
+from diboson.analysis.region_analysis import (
+    ProcessSpec,
+    process_region as _process_region,
+    generate_event_count_heatmap as _generate_event_count_heatmap,
+    generate_uniformity_heatmap as _generate_uniformity_heatmap,
+    generate_unphysicality_heatmap as _generate_unphysicality_heatmap,
+)
 
-ZZ_path = ZZ_REORGANISED_DATA
-ZZ_save = ZZ_ENTANGLEMENT_PLOTS
+ZZ_path = ZZ_RAW_DIR        # per-bin angular data subdirs
+ZZ_processed = ZZ_PROCESSED_DIR  # bell/concurrence grids and coefficient files
+ZZ_save = ZZ_PLOTS_DIR
 
-regions = { 
+regions = {
         (i, j): [(cos_min, cos_min + 0.1), (mass_min, mass_min + 50.0)]
         for i in range(9)
         for j in range(16)
@@ -23,297 +31,39 @@ regions = {
         for mass_min in [200.0 + 50.0 * j]
     }
 
+
+def _zz_get_density_matrix(theta_paths, phi_paths):
+    A, C = calculate_coefficients_AC(theta_paths, phi_paths)
+    return calculate_density_matrix_AC(A, C)
+
+
+ZZ_SPEC = ProcessSpec(
+    name="ZZ",
+    n_mass_bins=16,
+    mass_max=1000.0,
+    psi_filename="psi_data_combined_new.txt",
+    inv_mass_filename="ZZ_inv_mass_combined_new.txt",
+    theta_filenames={1: "e+_theta_data_combined_new.txt", 3: "mu+_theta_data_combined_new.txt"},
+    phi_filenames={1: "e+_phi_data_combined_new.txt", 3: "mu+_phi_data_combined_new.txt"},
+    get_density_matrix=_zz_get_density_matrix,
+    get_variance=calculate_variance_AC,
+)
+
 def generate_event_count_heatmap(ZZ_path, ZZ_save, regions, num_x_bins=180, num_y_bins=200):
-    import matplotlib.pyplot as plt
+    return _generate_event_count_heatmap(ZZ_SPEC, ZZ_path, ZZ_save, regions, num_x_bins=num_x_bins, num_y_bins=num_y_bins)
 
-    event_count_grid = np.zeros((num_y_bins, num_x_bins))
-
-    # Define bin edges for high-resolution mapping
-    cos_psi_edges = np.linspace(0, 0.9, num_x_bins + 1)  # Bin edges in cos_psi
-    inv_mass_edges = np.linspace(200, 1200, num_y_bins + 1)  # Bin edges in M_ZZ
-
-    # Loop through each defined region and bin events
-    for key, region in regions.items():
-        print("Calculating event count for region:", region)
-        save_dir = os.path.join(
-            ZZ_path,
-            f"cos_psi_{region[0][0]}_{region[0][1]}_inv_mass_{region[1][0]}_{region[1][1]}"
-        )
-        
-        if os.path.exists(save_dir):
-            print(f"Directory {save_dir} found.")
-            
-            # Load event data
-            cos_psi_path = os.path.join(save_dir, "psi_data_combined_new.txt")
-            ZZ_inv_path = os.path.join(save_dir, "ZZ_inv_mass_combined_new.txt")
-    
-            cos_psi_data = np.loadtxt(cos_psi_path)
-            ZZ_inv_mass = np.loadtxt(ZZ_inv_path)
-    
-            # 2D histogram binning into defined grid
-            hist2d, _, _ = np.histogram2d(ZZ_inv_mass, cos_psi_data, bins=[inv_mass_edges, cos_psi_edges])
-            
-            # Accumulate event counts into the main grid
-            event_count_grid += hist2d
-
-    # Plot the heatmap of event counts
-    plt.figure(figsize=(12, 10))
-    plt.imshow(event_count_grid, origin='lower', extent=[0, 0.9, 200, 1200],
-               aspect='auto', cmap='inferno', vmin=0, vmax=2500)
-    colorbar = plt.colorbar(label=r'Event Count', orientation='vertical')
-    colorbar.ax.yaxis.label.set_fontsize(16)
-    plt.xlabel(r'$\cos{\Theta}$', fontsize=16)
-    plt.ylabel(r'$M_{ZZ} (GeV)$', fontsize=16)
-
-    # Save the heatmap in both PDF and PNG formats
-    heatmap_filename_pdf = os.path.join(ZZ_save, "event_count_heatmap_ZZ_180x200.pdf")
-    plt.savefig(heatmap_filename_pdf)
-    heatmap_filename_png = os.path.join(ZZ_save, "event_count_heatmap_ZZ_180x200.png")
-    plt.savefig(heatmap_filename_png)
-    plt.close()
-    
-    return event_count_grid
 
 def generate_uniformity_heatmap(ZZ_path, ZZ_save, regions):
-    """
-    Compute and plot the uniformity score heatmap.
-    
-    Parameters:
-        ZZ_path (str): Base path to the ZZ data.
-        ZZ_save (str): Directory to save the plots and numpy file.
-        regions (dict): Dictionary specifying regions.
-    
-    Returns:
-        uniformity_grid (ndarray): The computed uniformity scores grid.
-    """
-    import matplotlib.pyplot as plt
+    return _generate_uniformity_heatmap(ZZ_SPEC, ZZ_path, ZZ_save, regions)
 
-    uniformity_grid = np.zeros((9, 20))  # To store uniformity scores
-
-    for (i, j), region in regions.items():
-        print(f"Calculating uniformity for region: {region}...")
-
-        save_dir = os.path.join(
-            ZZ_path,
-            f"cos_psi_{region[0][0]}_{region[0][1]}_inv_mass_{region[1][0]}_{region[1][1]}"
-        )
-        
-        if os.path.exists(save_dir):
-            cos_psi_path = os.path.join(save_dir, "psi_data_combined_new.txt")
-            ZZ_inv_path = os.path.join(save_dir, "ZZ_inv_mass_combined_new.txt")
-
-            cos_psi_data = np.loadtxt(cos_psi_path)
-            ZZ_inv_mass = np.loadtxt(ZZ_inv_path)
-
-            # Histogram within region: use 10x10 binning
-            h, _, _ = np.histogram2d(ZZ_inv_mass, cos_psi_data, bins=[10, 10])
-            mean = np.mean(h)
-            std = np.std(h)
-            
-            # Avoid divide by zero
-            if mean > 0:
-                uniformity = 1.0 - (std / mean)
-            else:
-                uniformity = 0.0
-
-            # Store the uniformity score in the uniformity grid
-            uniformity_grid[i, j] = uniformity
-
-    # Transpose the uniformity_grid to match the expected grid shape
-    uniformity_grid = uniformity_grid.T
-    np.save(os.path.join(ZZ_save, "uniformity_scores.npy"), uniformity_grid)
-
-    # Plot the heatmap of uniformity scores
-    plt.figure(figsize=(12, 10))
-    plt.imshow(uniformity_grid, origin='lower', extent=[0, 0.9, 200, 1200],
-                aspect='auto', cmap='plasma_r', vmin=0.7, vmax=1)
-    colorbar = plt.colorbar(label='Uniformity Score', orientation='vertical')
-    colorbar.ax.yaxis.label.set_fontsize(16)
-    plt.xlabel(r'$\cos{\Theta}$', fontsize=16)
-    plt.ylabel(r'$M_{ZZ} (GeV)$', fontsize=16)
-    plt.yticks(np.arange(200, 1201, 100), fontsize=14)
-    plt.xticks(np.arange(0.0, 1.0, 0.1), fontsize=14)
-
-    # Add the value of the uniformity score to each square
-    num_rows, num_cols = uniformity_grid.shape
-    x_centers = np.linspace(0.05, 0.85, num_cols)
-    y_centers = np.linspace(225.0, 1175.0, num_rows)
-    for i, y in enumerate(y_centers):
-        for j, x in enumerate(x_centers):
-            score = uniformity_grid[i, j]
-            plt.text(x, y, f"{score:.2f}", color="white", ha="center", va="center", fontsize=12)
-
-    # Save the plot in both PDF and PNG formats
-    heatmap_filename_pdf = os.path.join(ZZ_save, "uniformity_heatmap_ZZ.pdf")
-    plt.savefig(heatmap_filename_pdf)
-    heatmap_filename_png = os.path.join(ZZ_save, "uniformity_heatmap_ZZ.png")
-    plt.savefig(heatmap_filename_png)
-    plt.close()
-
-    return uniformity_grid
 
 def generate_unphysicality_heatmap(ZZ_path=ZZ_path, ZZ_save=ZZ_save, regions=regions, unphysicality_grid=False):
-    """
-    Compute and plot the unphysicality score heatmap.
-    
-    Parameters:
-        ZZ_path (str): Base path to the ZZ data.
-        ZZ_save (str): Directory to save the plots and numpy file.
-        regions (dict): Dictionary specifying regions.
-    
-    Returns:
-        unphysicality_grid (ndarray): The computed unphysicality scores grid.
-    """
+    data = unphysicality_grid if isinstance(unphysicality_grid, np.ndarray) else None
+    return _generate_unphysicality_heatmap(ZZ_SPEC, ZZ_path, ZZ_save, regions, data=data)
 
-    if not unphysicality_grid:
-        unphysicality_grid = np.zeros((9, 16))  # To store unphysicality scores
-    
-        for (i, j), region in regions.items():
-            print(f"Calculating unphysicality for region: {region}...")
-
-            save_dir = os.path.join(
-                ZZ_path,
-                f"cos_psi_{region[0][0]}_{region[0][1]}_inv_mass_{region[1][0]}_{region[1][1]}"
-            )
-            
-            if os.path.exists(save_dir):
-                # Read file paths for theta and phi data
-                theta_paths = {
-                    1: os.path.join(save_dir, "e+_theta_data_combined_new.txt"),
-                    3: os.path.join(save_dir, "mu+_theta_data_combined_new.txt")
-                }
-                phi_paths = {
-                    1: os.path.join(save_dir, "e+_phi_data_combined_new.txt"),
-                    3: os.path.join(save_dir, "mu+_phi_data_combined_new.txt")
-                }
-
-                # Calculate coefficients and density matrix from theta and phi data
-                A_coefficients, C_coefficients = calculate_coefficients_AC(theta_paths, phi_paths)
-                density_matrix = calculate_density_matrix_AC(A_coefficients, C_coefficients)
-                # Calculate the unphysicality score for the density matrix
-                unphysicality = unphysicality_score(density_matrix)
-                print(f"\nUnphysicality score for region: {region} = {unphysicality:.4g}\n")
-                # Store the unphysicality score in the unphysicality grid
-                unphysicality_grid[i, j] = unphysicality
-            else:
-                print(f"Directory {save_dir} not found. Skipping region.")
-
-        # Transpose the unphysicality_grid to match the expected grid shape
-        unphysicality_grid = unphysicality_grid.T
-        np.save(os.path.join(ZZ_save, "unphysicality_scores_ZZ.npy"), unphysicality_grid)
-
-    else:
-        unphysicality_grid = np.load(os.path.join(ZZ_save, "unphysicality_scores_ZZ.npy"))
-
-    # Plot the heatmap of unphysicality scores
-    plt.figure(figsize=(12, 10))
-    plt.imshow(unphysicality_grid, origin='lower', extent=[0, 0.9, 200, 1000],
-                aspect='auto', cmap='plasma')
-    colorbar = plt.colorbar(label='Unphysicality', orientation='vertical')
-    colorbar.ax.yaxis.label.set_fontsize(16)
-    plt.xlabel(r'$\cos{\Theta}$', fontsize=16)
-    plt.ylabel(r'$M_{ZZ} (GeV)$', fontsize=16)
-    plt.yticks(np.arange(200, 1001, 100), fontsize=14)
-    plt.xticks(np.arange(0.0, 1.0, 0.1), fontsize=14)
-    # Add the value of the unphysicality score to each square
-    num_rows, num_cols = unphysicality_grid.shape
-    x_centers = np.linspace(0.05, 0.85, num_cols)
-    y_centers = np.linspace(225.0, 975.0, num_rows)
-    for i, y in enumerate(y_centers):
-        for j, x in enumerate(x_centers):
-            score = unphysicality_grid[i, j]
-            plt.text(x, y, f"{score:.2f}", color="white", ha="center", va="center", fontsize=12)
-    
-    # Save the plot in both PDF and PNG formats
-    heatmap_filename_pdf = os.path.join(ZZ_save, "unphysicality_heatmap_ZZ.pdf")
-    plt.savefig(heatmap_filename_pdf)
-    heatmap_filename_png = os.path.join(ZZ_save, "unphysicality_heatmap_ZZ.png")
-    plt.savefig(heatmap_filename_png)
-    plt.close()
-
-    return unphysicality_grid
 
 def process_region(region_key, ZZ_path=ZZ_path, regions=regions, calc_bell=True, calc_concurrence=True, check_density=False, raw=False):
-    """
-    Process a single region to calculate density matrix, concurrence, and Bell operator values.
-
-    Parameters:
-        region_key (tuple): Key for the desired region in the regions dictionary.
-        ZZ_path (str): Base path to the ZZ data.
-        regions (dict): Dictionary specifying regions.
-
-    Returns:
-        dict: A dictionary containing the region, concurrence values (before and after PSD projection),
-              Bell operator value, optimal parameters, and its uncertainty.
-              Returns None if the save directory is not found.
-    """
-
-    region = regions[region_key]
-    print(f"\n\nCalculating for region: {region}...\n")
-    save_dir = os.path.join(
-        ZZ_path,
-        f"cos_psi_{region[0][0]}_{region[0][1]}_inv_mass_{region[1][0]}_{region[1][1]}"
-    )
-    if not os.path.exists(save_dir):
-        print(f"Directory {save_dir} not found. Skipping region.")
-        return None
-
-    # Read file paths for theta and phi data
-    theta_paths = {
-        1: os.path.join(save_dir, "e+_theta_data_combined_new.txt"),
-        3: os.path.join(save_dir, "mu+_theta_data_combined_new.txt")
-    }
-    phi_paths = {
-        1: os.path.join(save_dir, "e+_phi_data_combined_new.txt"),
-        3: os.path.join(save_dir, "mu+_phi_data_combined_new.txt")
-    }
-
-    # Calculate coefficients and density matrix from theta and phi data
-    A_coefficients, C_coefficients = calculate_coefficients_AC(theta_paths, phi_paths)
-    density_matrix = calculate_density_matrix_AC(A_coefficients, C_coefficients)
-    if check_density:
-        check_density_matrix(density_matrix)
-
-    # Calculate the unphysicality score for the density matrix
-    unphysicality = unphysicality_score(density_matrix)
-    print(f"\nUnphysicality score for region: {region} = {unphysicality:.4g}\n")
-
-    if not raw:
-        # Project density matrix to positive semi-definite
-        density_matrix = project_to_psd(density_matrix, const=unphysicality, normalize_trace=True)
-        if check_density:
-            check_density_matrix(density_matrix)
-
-    concurrence_val = 0.0
-    bell_value = 0.0
-    optimal_params = np.zeros(12)
-    uncertainty_bell = 0.0
-
-    if calc_concurrence:
-        # Calculate the concurrence value for the region
-        concurrence_val = concurrence_lower(density_matrix)
-        print(f"\nConcurrence bound for region: {region} = {concurrence_val:.4g}\n")
-
-    if calc_bell:
-        # Calculate the Bell operator value for the region
-        bell_value, optimal_params = bell_inequality_optimization(density_matrix, O_bell_prime1)
-        optimal_O_bell = optimal_bell_operator(O_bell_prime1, optimal_params)
-        print(f"Bell operator value for region: {region} = {bell_value:.4g}\n")
-
-        # Calculate the uncertainty in the Bell operator value
-        variance = calculate_variance_AC(theta_paths, phi_paths, optimal_O_bell).real
-        print(f"Variance of Bell operator for region: {region} = {variance:.6g}\n")
-        uncertainty_bell = np.sqrt(variance)
-        print(f"Uncertainty of Bell operator for region: {region} = {uncertainty_bell:.6g}\n")
-
-    return {
-        'region': region,
-        'concurrence_val': concurrence_val,
-        'bell_value': bell_value,
-        'optimal_params': optimal_params,
-        'uncertainty_bell': uncertainty_bell,
-        'unphysicality': unphysicality
-    }
+    return _process_region(region_key, ZZ_SPEC, ZZ_path, regions, calc_bell=calc_bell, calc_concurrence=calc_concurrence, check_density=check_density, raw=raw)
 
 def plot_contour_heatmap(ZZ_save, cos_psi_grid, inv_mass_grid, bell_value_grid, label, concurrence=False):
     _plot_contour_heatmap(ZZ_save, cos_psi_grid, inv_mass_grid, bell_value_grid, label, "ZZ", concurrence=concurrence)
@@ -327,10 +77,10 @@ cos_psi_grid, inv_mass_grid = np.meshgrid(cos_psi_centers, inv_mass_centers)
 
 label = "raw"
 
-bell_value_grid = np.loadtxt(os.path.join(ZZ_path, f"bell_operator_grid_ZZ_AC_{label}.txt"), delimiter=',')
-uncertainty_grid = np.loadtxt(os.path.join(ZZ_path, f"uncertainty_grid_ZZ_AC_{label}.txt"), delimiter=',')
-concurrence_grid = np.loadtxt(os.path.join(ZZ_path, f"concurrence_grid_ZZ_AC_{label}.txt"), delimiter=',')
-optimal_params_grid = np.load(os.path.join(ZZ_path, f"optimal_params_grid_ZZ_AC_{label}.npy"))
+bell_value_grid = np.loadtxt(os.path.join(ZZ_processed, f"bell_operator_grid_ZZ_AC_{label}.txt"), delimiter=',')
+uncertainty_grid = np.loadtxt(os.path.join(ZZ_processed, f"uncertainty_grid_ZZ_AC_{label}.txt"), delimiter=',')
+concurrence_grid = np.loadtxt(os.path.join(ZZ_processed, f"concurrence_grid_ZZ_AC_{label}.txt"), delimiter=',')
+optimal_params_grid = np.load(os.path.join(ZZ_processed, f"optimal_params_grid_ZZ_AC_{label}.npy"))
 
 
 for key, region in regions.items():
@@ -343,16 +93,16 @@ for key, region in regions.items():
         optimal_params_grid[:, i, j] = quantities['optimal_params']
 
         # Save the Bell operator value grid to a file
-        np.savetxt(os.path.join(ZZ_path, f"bell_operator_grid_ZZ_AC_{label}.txt"), bell_value_grid, delimiter=',')
+        np.savetxt(os.path.join(ZZ_processed, f"bell_operator_grid_ZZ_AC_{label}.txt"), bell_value_grid, delimiter=',')
 
         # Save the concurrence value grid to a file
-        np.savetxt(os.path.join(ZZ_path, f"concurrence_grid_ZZ_AC_{label}.txt"), concurrence_grid, delimiter=',')
+        np.savetxt(os.path.join(ZZ_processed, f"concurrence_grid_ZZ_AC_{label}.txt"), concurrence_grid, delimiter=',')
 
         # Save the optimal parameters grid to a npy file
-        np.save(os.path.join(ZZ_path, f"optimal_params_grid_ZZ_AC_{label}.npy"), optimal_params_grid)
+        np.save(os.path.join(ZZ_processed, f"optimal_params_grid_ZZ_AC_{label}.npy"), optimal_params_grid)
 
         # Save the uncertainty grid to a file
-        np.savetxt(os.path.join(ZZ_path, f"uncertainty_grid_ZZ_AC_{label}.txt"), uncertainty_grid, delimiter=',')
+        np.savetxt(os.path.join(ZZ_processed, f"uncertainty_grid_ZZ_AC_{label}.txt"), uncertainty_grid, delimiter=',')
 
 
 

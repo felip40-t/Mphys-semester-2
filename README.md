@@ -135,16 +135,16 @@ Orchestrate the full pipeline over a 2D phase-space grid (M_VV × cosΘ). For ea
 
 ## MadGraph5 Installation
 
-MadGraph5_aMC@NLO (v3.5.6) is required for Monte Carlo event generation. The scripts in this repository call MadGraph5 via hardcoded absolute paths, so the install location must be noted and updated accordingly.
+MadGraph5_aMC@NLO is required for Monte Carlo event generation. The scripts in this repository call MadGraph5 via hardcoded absolute paths, so the install location must be noted and updated accordingly.
 
 ### 1. Download and unpack
 
 ```bash
-wget https://launchpad.net/mg5amcnlo/3.0/3.5.x/+download/MG5_aMC_v3.5.6.tar.gz
+wget https://launchpad.net/mg5amcnlo/3.0/3.5.x/+download/MG5_aMC_v3.7.0.tar.gz
 tar -xzf MG5_aMC_v3.5.6.tar.gz
 ```
 
-Place the unpacked directory wherever you prefer (e.g. `~/MG5_aMC_v3_5_6/`).
+Place the unpacked directory wherever you prefer (e.g. `~/MG5_aMC/`).
 
 ### 2. Dependencies
 

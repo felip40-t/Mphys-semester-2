@@ -1,9 +1,9 @@
 import os
 import numpy as np
 from utils.histo_plotter import read_data
-from config import WW_DATA_DIR
+from config import WW_RAW_DIR
 
-WW_path = WW_DATA_DIR
+WW_path = WW_RAW_DIR
 
 
 # Function to calculate all parameters for WW datasets

@@ -4,14 +4,14 @@ import csv
 from scipy.special import sph_harm_y
 from utils.histo_plotter import read_data
 from core.density_matrix_calculator import T1_operators, T2_operators
-from config import ZZ_DATA_DIR  # also bootstraps src/ onto sys.path
+from config import ZZ_PROCESSED_DIR  # also bootstraps src/ onto sys.path
 from diboson.physics.projectors import (
     plus_minus, projector_1, projector_2, projector_3, projector_4,
     projector_5, projector_6, projector_7, projector_8, projector_vector,
     read_masked_data,
 )
 
-ZZ_path = ZZ_DATA_DIR
+ZZ_path = ZZ_PROCESSED_DIR
 # Read theta and phi values for both datasets
 cos_theta_paths = {
     1: os.path.join(ZZ_path, "mu+/theta_data_combined.txt"),

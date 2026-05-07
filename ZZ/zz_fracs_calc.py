@@ -1,9 +1,9 @@
 import os
 import numpy as np
 from utils.histo_plotter import read_data
-from config import ZZ_DATA_DIR
+from config import ZZ_RAW_DIR
 
-ZZ_PATH = ZZ_DATA_DIR
+ZZ_PATH = ZZ_RAW_DIR
 
 # Function to calculate all parameters for ZZ datasets
 def calculate_parameters(data1, data3, phi_data1, phi_data3):
