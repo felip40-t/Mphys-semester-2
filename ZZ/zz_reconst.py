@@ -1,7 +1,6 @@
 import os
 import numpy as np
 from lhe_reading_ZZ import find_latest_run_dir
-from utils.histo_plotter import read_data
 from config import MG5_INSTALL_DIR
 
 # Update the MadGraph5 directory and process directory
@@ -37,7 +36,7 @@ def extract_data():
     for particle_name, directory in particle_directories.items():
         if particle_name not in ['z1', 'z2']:  # Only read data for mu+, mu-, e+, e-
             data_file = os.path.join(directory, f"data_{run_number}.txt")
-            particle_arrays[particle_name] = read_data(data_file)
+            particle_arrays[particle_name] = np.loadtxt(data_file, delimiter=',')
 
 def reconstruct_particles():
     """

@@ -2,9 +2,8 @@ import numpy as np
 import os
 import csv
 from scipy.special import sph_harm_y
-from utils.histo_plotter import read_data
 from core.density_matrix_calculator import T1_operators, T2_operators
-from config import ZZ_PROCESSED_DIR  # also bootstraps src/ onto sys.path
+from config import ZZ_PROCESSED_DIR, ZZ_ETA as ETA, ZZ_G_L as g_L, ZZ_G_R as g_R  # also bootstraps src/ onto sys.path
 from diboson.physics.projectors import (
     plus_minus, projector_1, projector_2, projector_3, projector_4,
     projector_5, projector_6, projector_7, projector_8, projector_vector,
@@ -12,20 +11,7 @@ from diboson.physics.projectors import (
 )
 
 ZZ_path = ZZ_PROCESSED_DIR
-# Read theta and phi values for both datasets
-cos_theta_paths = {
-    1: os.path.join(ZZ_path, "mu+/theta_data_combined.txt"),
-    3: os.path.join(ZZ_path, "e+/theta_data_combined.txt")
-}
-phi_paths = {
-    1: os.path.join(ZZ_path, "mu+/phi_data_combined.txt"),
-    3: os.path.join(ZZ_path, "e+/phi_data_combined.txt")
-}
 
-# Constants
-ETA = 0.213
-g_L = -0.26953
-g_R = 0.2317
 
 l_values = [1, 2]
 m_values = {1: [-1, 0, 1], 2: [-2, -1, 0, 1, 2]}
@@ -39,36 +25,6 @@ a_matrix = ( 1 / (g_R**2 - g_L**2) ) * np.array([[g_R**2, 0, 0, 0, 0, g_L**2, 0,
                                                  [0, g_L**2, 0, 0, 0, 0, g_R**2, 0], 
                                                  [0, 0, (np.sqrt(3)/2) * g_L**2, 0, 0, 0, 0, 0.5 * g_L**2 - g_R**2] ])
 
-def calculate_coefficients_fgh(theta_paths, phi_paths, mask=None):
-    """
-    Calculate the f, g, and h coefficients and return them as dictionaries.
-    """
-    # Read data and apply mask if provided
-    theta_values = {1: read_data(theta_paths[1]), 3: read_data(theta_paths[3])}
-    phi_values = {1: read_data(phi_paths[1]), 3: read_data(phi_paths[3])}
-    
-    # Initialize coefficients
-    f_coefficients = np.zeros(8)
-    g_coefficients = np.zeros(8)
-    h_coefficients = np.zeros((8, 8))
-
-    # Calculate projector vectors
-    p_1 = a_matrix @ projector_vector(theta_values[1], phi_values[1], 1)
-    p_3 = a_matrix @ projector_vector(theta_values[3], phi_values[3], 1)
-
-    # Calculate f and g coefficients using vectorized operations
-    for i in range(8):
-        f_coefficients[i] = 0.5 * 0.5 * 0.5 * np.mean(p_1[i] + p_3[i])
-
-    g_coefficients = np.copy(f_coefficients)
-
-    # Calculate h coefficients using vectorized operations
-    for i in range(8):
-        for j in range(8):
-            h_coefficients[i,j] = 0.5 * 0.25 * 0.25 * np.mean(p_1[i] * p_3[j] + p_3[i] * p_1[j])
-
-    return f_coefficients, g_coefficients, h_coefficients
-
 
 def calculate_coefficients_AC(theta_paths, phi_paths, mask=None):
     """
@@ -78,9 +34,7 @@ def calculate_coefficients_AC(theta_paths, phi_paths, mask=None):
     theta_values = {1: np.loadtxt(theta_paths[1]), 3: np.loadtxt(theta_paths[3])}
     phi_values = {1: np.loadtxt(phi_paths[1]), 3: np.loadtxt(phi_paths[3])}
     
-    # theta_values = theta_paths
-    # phi_values = phi_paths
-
+    
     # Apply mask if provided
     if mask is not None:
         theta_values = {key: theta[mask] for key, theta in theta_values.items()}

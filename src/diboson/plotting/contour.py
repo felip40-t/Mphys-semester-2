@@ -3,8 +3,14 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.colors import LinearSegmentedColormap
 from scipy.ndimage import gaussian_filter
+from diboson.plotting.style import (
+    FIGSIZE_HEATMAP,
+    FONTSIZE_LABEL,
+    FONTSIZE_TICK,
+    FONTSIZE_ANNOTATION,
+    CONCURRENCE_CMAP,
+)
 
 
 def plot_contour_heatmap(save_dir, cos_psi_grid, inv_mass_grid, bell_value_grid, label, process_label, concurrence=False):
@@ -20,26 +26,23 @@ def plot_contour_heatmap(save_dir, cos_psi_grid, inv_mass_grid, bell_value_grid,
         process_label (str): Process tag used in filenames and the y-axis label, e.g. "ZZ" or "WW".
         concurrence (bool): If True, indicates that the values are concurrence values.
     """
-    colors = ['darkblue', 'blue', 'purple', 'red']
-    concurrence_cmap = LinearSegmentedColormap.from_list('concurrence_cmap', colors, N=256)
-
     bell_grid_smoothed = gaussian_filter(bell_value_grid, sigma=1.0)
-    plt.figure(figsize=(12, 10))
+    plt.figure(figsize=FIGSIZE_HEATMAP)
     custom_levels = np.arange(np.round(np.min(bell_grid_smoothed), 1) - 0.1, np.round(np.max(bell_grid_smoothed), 1) + 0.2, step=0.1)
     contour_filled = plt.contourf(cos_psi_grid, inv_mass_grid, bell_grid_smoothed,
-                                  levels=custom_levels, cmap=concurrence_cmap if concurrence else 'plasma')
+                                  levels=custom_levels, cmap=CONCURRENCE_CMAP if concurrence else 'plasma')
     contour_lines = plt.contour(cos_psi_grid, inv_mass_grid, bell_grid_smoothed,
                                 levels=custom_levels, colors='black', linewidths=0.7)
-    plt.clabel(contour_lines, inline=True, fontsize=12, fmt="%.2f")
+    plt.clabel(contour_lines, inline=True, fontsize=FONTSIZE_ANNOTATION, fmt="%.2f")
     if concurrence:
         colorbar = plt.colorbar(contour_filled, label=r'$\mathcal{C}_LB$', orientation='vertical')
     else:
         colorbar = plt.colorbar(contour_filled, label=r'$\mathcal{I}_3$', orientation='vertical')
-    colorbar.ax.yaxis.label.set_fontsize(16)
-    plt.xlabel(r'$\cos{\Theta}$', fontsize=16)
-    plt.ylabel(rf'$M_{{{process_label}}} (GeV)$', fontsize=16)
-    plt.yticks(np.arange(300, 1200, 100), fontsize=14)
-    plt.xticks(np.arange(0.1, 0.9, 0.1), fontsize=14)
+    colorbar.ax.yaxis.label.set_fontsize(FONTSIZE_LABEL)
+    plt.xlabel(r'$\cos{\Theta}$', fontsize=FONTSIZE_LABEL)
+    plt.ylabel(rf'$M_{{{process_label}}} (GeV)$', fontsize=FONTSIZE_LABEL)
+    plt.yticks(np.arange(300, 1200, 100), fontsize=FONTSIZE_TICK)
+    plt.xticks(np.arange(0.1, 0.9, 0.1), fontsize=FONTSIZE_TICK)
     plt.tight_layout()
     if concurrence:
         name = f"concurrence_contour_{process_label}_{label}.pdf"
@@ -51,18 +54,18 @@ def plot_contour_heatmap(save_dir, cos_psi_grid, inv_mass_grid, bell_value_grid,
     plt.savefig(plot_filename)
     plt.close()
 
-    plt.figure(figsize=(12, 10))
+    plt.figure(figsize=FIGSIZE_HEATMAP)
     plt.imshow(bell_value_grid, origin='lower', extent=[0, 0.9, 200, 1200],
-               aspect='auto', cmap=concurrence_cmap if concurrence else 'plasma')
+               aspect='auto', cmap=CONCURRENCE_CMAP if concurrence else 'plasma')
     if concurrence:
         colorbar = plt.colorbar(label=r'$\mathcal{C}_{LB}$', orientation='vertical')
     else:
         colorbar = plt.colorbar(label=r'$\mathcal{I}_3$', orientation='vertical')
-    colorbar.ax.yaxis.label.set_fontsize(16)
-    plt.xlabel(r'$\cos{\Theta}$', fontsize=16)
-    plt.ylabel(rf'$M_{{{process_label}}} (GeV)$', fontsize=16)
-    plt.yticks(np.arange(200, 1201, 100), fontsize=14)
-    plt.xticks(np.arange(0.0, 1.0, 0.1), fontsize=14)
+    colorbar.ax.yaxis.label.set_fontsize(FONTSIZE_LABEL)
+    plt.xlabel(r'$\cos{\Theta}$', fontsize=FONTSIZE_LABEL)
+    plt.ylabel(rf'$M_{{{process_label}}} (GeV)$', fontsize=FONTSIZE_LABEL)
+    plt.yticks(np.arange(200, 1201, 100), fontsize=FONTSIZE_TICK)
+    plt.xticks(np.arange(0.0, 1.0, 0.1), fontsize=FONTSIZE_TICK)
 
     num_rows, num_cols = bell_value_grid.shape
     x_centers = np.linspace(0.05, 0.85, num_cols)
@@ -70,7 +73,7 @@ def plot_contour_heatmap(save_dir, cos_psi_grid, inv_mass_grid, bell_value_grid,
     for i, y in enumerate(y_centers):
         for j, x in enumerate(x_centers):
             plt.text(x, y, f"{bell_value_grid[i, j]:.2f}", color="white",
-                     ha="center", va="center", fontsize=12)
+                     ha="center", va="center", fontsize=FONTSIZE_ANNOTATION)
     plt.tight_layout()
 
     if concurrence:

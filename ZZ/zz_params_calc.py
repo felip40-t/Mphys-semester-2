@@ -1,6 +1,5 @@
 import os
 import numpy as np
-from utils.histo_plotter import read_data
 from config import ZZ_DATA_DIR_LEGACY
 
 ZZ_path = ZZ_DATA_DIR_LEGACY
@@ -138,8 +137,8 @@ for dataset in ZZ_files:
     data_path_1 = os.path.join(ZZ_path, "mu+", dataset)
     data_path_2 = os.path.join(ZZ_path, "e+", dataset)
 
-    cos_theta_values_1 = read_data(data_path_1)
-    cos_theta_values_2 = read_data(data_path_2)
+    cos_theta_values_1 = np.loadtxt(data_path_1)
+    cos_theta_values_2 = np.loadtxt(data_path_2)
 
     # Number of events
     num_events_1, num_events_2 = len(cos_theta_values_1), len(cos_theta_values_2)

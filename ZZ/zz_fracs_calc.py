@@ -1,15 +1,14 @@
 import os
 import numpy as np
-from utils.histo_plotter import read_data
-from config import ZZ_RAW_DIR
+from config import ZZ_RAW_DIR, ZZ_ETA
 
 ZZ_PATH = ZZ_RAW_DIR
+eta = ZZ_ETA
 
 # Function to calculate all parameters for ZZ datasets
 def calculate_parameters(data1, data3, phi_data1, phi_data3):
     """Calculates all parameters for the ZZ case using two datasets (mu+ and e+)."""
     num_events = len(data1)
-    eta = 0.214
 
     def spherical_harmonic_1(data):
         return 0.5 * np.sqrt(3 / np.pi) * data
@@ -182,18 +181,18 @@ theta_path_1 = os.path.join(ZZ_PATH, "mu+/theta_data_4.txt")
 theta_path_2 = os.path.join(ZZ_PATH, "e+/theta_data_4.txt")
 
 print(f"Reading file... {theta_path_1}")
-cos_theta_values_1 = read_data(theta_path_1)
+cos_theta_values_1 = np.loadtxt(theta_path_1)
 print(f"Reading file... {theta_path_2}")
-cos_theta_values_2 = read_data(theta_path_2)
+cos_theta_values_2 = np.loadtxt(theta_path_2)
 
 # Read phi values
 phi_path_1 = os.path.join(ZZ_PATH, "mu+/phi_data_4.txt")
 phi_path_2 = os.path.join(ZZ_PATH, "e+/phi_data_4.txt")
 
 print(f"Reading file... {phi_path_1}")
-phi_values_1 = read_data(phi_path_1)
+phi_values_1 = np.loadtxt(phi_path_1)
 print(f"Reading file... {phi_path_2}")
-phi_values_2 = read_data(phi_path_2)
+phi_values_2 = np.loadtxt(phi_path_2)
 
 # Calculate parameters and uncertainties
 parameters, uncertainties = calculate_parameters(cos_theta_values_1, cos_theta_values_2, phi_values_1, phi_values_2)

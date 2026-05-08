@@ -258,10 +258,6 @@ def reorganise_data(particle_directories, directory):
         for mass_min in [200.0 + 50.0 * j for j in range(16)]
     ]
 
-    # regions += [
-    #     [(0.9, 0.95), (mass_min, mass_min + 100.0)]
-    #     for mass_min in [200.0 + 100.0 * j for j in range(8)]
-    # ]
 
     reorganised_path = os.path.join(directory, "reorganised_data")
     # Define file paths
@@ -516,41 +512,7 @@ def read_and_boost_single_run(run_dir, output_dir):
         print(f"Error writing output files: {e}")
 
 def main():
-    process_dir = os.path.join(MG5_INSTALL_DIR, "pp_ZZ_SM")
-    events_dir = os.path.join(process_dir, "Events")
-    run_dir = os.path.join(events_dir, "run_453")
-    organised_dir = os.path.join(process_dir, "Plots and data/reorganised_data")
-    # Open the tar file without extracting all files
-
-    # "\\wsl.localhost\Ubuntu\home\felipetcach\project\MG5_aMC_v3_5_6\Felipe_pp_ZZ_4l.tar.gz"
-
-    # tar_path = os.path.join(mg5_install_dir, "Felipe_pp_ZZ_4l.tar.gz")
-    # with tarfile.open(tar_path, "r") as tar:
-    #     # Extract only the Events directory to a temporary location
-    #     temp_dir = "/tmp/Felipe_pp_ZZ_4l_Events"
-    #     if not os.path.exists(temp_dir):
-    #         os.makedirs(temp_dir)
-    #     members = [member for member in tar.getmembers() if member.name.startswith("Felipe_pp_ZZ_4l/Events")]
-    #     total_members = len(members)
-    #     for i, member in enumerate(members, start=1):
-    #         tar.extract(member, path=temp_dir)
-    #         print(f"Extracting {i}/{total_members}: {member.name}")
-
-    # new_data_dir = os.path.join(temp_dir, "Felipe_pp_ZZ_4l/Events")
-    # base_dir = os.path.join(process_dir, "Events")
-    
-
-    # Run MadGraph and process data
-    # run_madgraph(mg5_install_dir, process_dir, ENERGY, NEVENTS)
-    # process_last_run(base_dir, particle_directories)
-    # process_and_combine_runs(base_dir, particle_directories, 309, 452)
-    # add_phase_points(os.path.join(process_dir, "Plots and data"))
-    # add_angles(particle_directories)
-    # filter_data(particle_directories, os.path.join(process_dir, "Plots and data"))
-    # reorganise_data(particle_directories, os.path.join(process_dir, "Plots and data"))
-    # read_boost_data(new_data_dir, os.path.join(process_dir, "Plots and data/reorganised_data"))
-    read_and_boost_single_run(run_dir, os.path.join(organised_dir, "run_453"))
-
+    return 0
 
 if __name__ == "__main__":
     main()

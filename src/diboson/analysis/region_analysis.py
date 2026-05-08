@@ -14,6 +14,8 @@ from typing import Callable, Dict
 import numpy as np
 import matplotlib.pyplot as plt
 
+from diboson.plotting.style import FIGSIZE_HEATMAP, FONTSIZE_LABEL, FONTSIZE_TICK, FONTSIZE_ANNOTATION
+from config import COS_BIN_MIN, COS_BIN_WIDTH, MASS_BIN_MIN, MASS_BIN_WIDTH
 from core.density_matrix_calculator import (
     O_bell_prime1,
     project_to_psd,
@@ -30,13 +32,40 @@ from core.concurrence_bound import concurrence_lower, check_density_matrix
 class ProcessSpec:
     name: str
     n_mass_bins: int
+    n_cos_bins: int
     mass_max: float
+    eta: float
     psi_filename: str
     inv_mass_filename: str
     theta_filenames: Dict[int, str]
     phi_filenames: Dict[int, str]
     get_density_matrix: Callable
     get_variance: Callable
+
+    def build_regions(self):
+        """Return the canonical {(i,j): [cos_range, mass_range]} dict for this process."""
+        return {
+            (i, j): [
+                (COS_BIN_MIN + COS_BIN_WIDTH * i, COS_BIN_MIN + COS_BIN_WIDTH * (i + 1)),
+                (MASS_BIN_MIN + MASS_BIN_WIDTH * j, MASS_BIN_MIN + MASS_BIN_WIDTH * (j + 1)),
+            ]
+            for i in range(self.n_cos_bins)
+            for j in range(self.n_mass_bins)
+        }
+
+    def grid_centers(self):
+        """Return (cos_psi_grid, inv_mass_grid) meshgrids of bin centres."""
+        cos_centers = np.arange(
+            COS_BIN_MIN + COS_BIN_WIDTH / 2,
+            COS_BIN_MIN + self.n_cos_bins * COS_BIN_WIDTH,
+            COS_BIN_WIDTH,
+        )
+        mass_centers = np.arange(
+            MASS_BIN_MIN + MASS_BIN_WIDTH / 2,
+            MASS_BIN_MIN + self.n_mass_bins * MASS_BIN_WIDTH + MASS_BIN_WIDTH / 2,
+            MASS_BIN_WIDTH,
+        )
+        return np.meshgrid(cos_centers, mass_centers)
 
 
 def _region_dir(raw_dir, region):
@@ -135,13 +164,13 @@ def generate_event_count_heatmap(spec, raw_dir, save_dir, regions, num_x_bins=18
             )
             event_count_grid += hist2d
 
-    plt.figure(figsize=(12, 10))
+    plt.figure(figsize=FIGSIZE_HEATMAP)
     plt.imshow(event_count_grid, origin='lower', extent=[0, 0.9, 200, 1200],
                aspect='auto', cmap='inferno', vmin=0, vmax=2500)
     colorbar = plt.colorbar(label=r'Event Count', orientation='vertical')
-    colorbar.ax.yaxis.label.set_fontsize(16)
-    plt.xlabel(r'$\cos{\Theta}$', fontsize=16)
-    plt.ylabel(rf'$M_{{{spec.name}}} (GeV)$', fontsize=16)
+    colorbar.ax.yaxis.label.set_fontsize(FONTSIZE_LABEL)
+    plt.xlabel(r'$\cos{\Theta}$', fontsize=FONTSIZE_LABEL)
+    plt.ylabel(rf'$M_{{{spec.name}}} (GeV)$', fontsize=FONTSIZE_LABEL)
 
     base = os.path.join(save_dir, f"event_count_heatmap_{spec.name}_{num_x_bins}x{num_y_bins}")
     plt.savefig(base + ".pdf")
@@ -175,15 +204,15 @@ def generate_uniformity_heatmap(spec, raw_dir, save_dir, regions):
     uniformity_grid = uniformity_grid.T
     np.save(os.path.join(save_dir, "uniformity_scores.npy"), uniformity_grid)
 
-    plt.figure(figsize=(12, 10))
+    plt.figure(figsize=FIGSIZE_HEATMAP)
     plt.imshow(uniformity_grid, origin='lower', extent=[0, 0.9, 200, 1200],
                aspect='auto', cmap='plasma_r', vmin=0.7, vmax=1)
     colorbar = plt.colorbar(label='Uniformity Score', orientation='vertical')
-    colorbar.ax.yaxis.label.set_fontsize(16)
-    plt.xlabel(r'$\cos{\Theta}$', fontsize=16)
-    plt.ylabel(rf'$M_{{{spec.name}}} (GeV)$', fontsize=16)
-    plt.yticks(np.arange(200, 1201, 100), fontsize=14)
-    plt.xticks(np.arange(0.0, 1.0, 0.1), fontsize=14)
+    colorbar.ax.yaxis.label.set_fontsize(FONTSIZE_LABEL)
+    plt.xlabel(r'$\cos{\Theta}$', fontsize=FONTSIZE_LABEL)
+    plt.ylabel(rf'$M_{{{spec.name}}} (GeV)$', fontsize=FONTSIZE_LABEL)
+    plt.yticks(np.arange(200, 1201, 100), fontsize=FONTSIZE_TICK)
+    plt.xticks(np.arange(0.0, 1.0, 0.1), fontsize=FONTSIZE_TICK)
 
     num_rows, num_cols = uniformity_grid.shape
     x_centers = np.linspace(0.05, 0.85, num_cols)
@@ -191,7 +220,7 @@ def generate_uniformity_heatmap(spec, raw_dir, save_dir, regions):
     for i, y in enumerate(y_centers):
         for j, x in enumerate(x_centers):
             plt.text(x, y, f"{uniformity_grid[i, j]:.2f}", color="white",
-                     ha="center", va="center", fontsize=12)
+                     ha="center", va="center", fontsize=FONTSIZE_ANNOTATION)
 
     base = os.path.join(save_dir, f"uniformity_heatmap_{spec.name}")
     plt.savefig(base + ".pdf")
@@ -223,15 +252,15 @@ def generate_unphysicality_heatmap(spec, raw_dir, save_dir, regions, data=None):
     else:
         unphysicality_grid = data
 
-    plt.figure(figsize=(12, 10))
+    plt.figure(figsize=FIGSIZE_HEATMAP)
     plt.imshow(unphysicality_grid, origin='lower', extent=[0, 0.9, 200, spec.mass_max],
                aspect='auto', cmap='plasma')
     colorbar = plt.colorbar(label='Unphysicality', orientation='vertical')
-    colorbar.ax.yaxis.label.set_fontsize(16)
-    plt.xlabel(r'$\cos{\Theta}$', fontsize=16)
-    plt.ylabel(rf'$M_{{{spec.name}}} (GeV)$', fontsize=16)
-    plt.yticks(np.arange(200, int(spec.mass_max) + 1, 100), fontsize=14)
-    plt.xticks(np.arange(0.0, 1.0, 0.1), fontsize=14)
+    colorbar.ax.yaxis.label.set_fontsize(FONTSIZE_LABEL)
+    plt.xlabel(r'$\cos{\Theta}$', fontsize=FONTSIZE_LABEL)
+    plt.ylabel(rf'$M_{{{spec.name}}} (GeV)$', fontsize=FONTSIZE_LABEL)
+    plt.yticks(np.arange(200, int(spec.mass_max) + 1, 100), fontsize=FONTSIZE_TICK)
+    plt.xticks(np.arange(0.0, 1.0, 0.1), fontsize=FONTSIZE_TICK)
 
     num_rows, num_cols = unphysicality_grid.shape
     x_centers = np.linspace(0.05, 0.85, num_cols)
@@ -239,7 +268,7 @@ def generate_unphysicality_heatmap(spec, raw_dir, save_dir, regions, data=None):
     for i, y in enumerate(y_centers):
         for j, x in enumerate(x_centers):
             plt.text(x, y, f"{unphysicality_grid[i, j]:.2f}", color="white",
-                     ha="center", va="center", fontsize=12)
+                     ha="center", va="center", fontsize=FONTSIZE_ANNOTATION)
 
     base = os.path.join(save_dir, f"unphysicality_heatmap_{spec.name}")
     plt.savefig(base + ".pdf")

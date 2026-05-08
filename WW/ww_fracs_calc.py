@@ -1,6 +1,5 @@
 import os
 import numpy as np
-from utils.histo_plotter import read_data
 from config import WW_RAW_DIR
 
 WW_path = WW_RAW_DIR
@@ -21,7 +20,6 @@ def calculate_parameters(data1, data3, phi_data1, phi_data3):
     def spherical_harmonic_2_m2(cos_theta, phi):
         return 0.25 * np.cos(2*phi) * np.sqrt( 15 / (2*np.pi) ) * np.sin(np.arccos(cos_theta))**2
 
-    
     def gamma222m2(cos_theta1, phi1, cos_theta3, phi3):
         return (15/(32*np.pi)) * np.cos(2 * (phi3 - phi1)) * np.sin(np.arccos(cos_theta1))**2 * np.sin(np.arccos(cos_theta3))**2
 
@@ -83,49 +81,11 @@ def calculate_parameters(data1, data3, phi_data1, phi_data3):
     def gamma2020():
         return Y21Y23
 
-    # exp_cos_1 = np.mean(data1)
-    # exp_sqr_cos_1 = np.mean(data1**2)
-
-    # unc_cos_1 = np.sqrt((exp_sqr_cos_1 - exp_cos_1**2)/num_events) 
-    # unc_cos_sqr_1 = np.sqrt((np.mean(data1**4) - exp_sqr_cos_1**2)/num_events)
-    
-    # exp_cos_3 = np.mean(data3)
-    # exp_sqr_cos_3 = np.mean(data3**2)
-
-    # unc_cos_3 = np.sqrt((exp_sqr_cos_3 - exp_cos_3**2)/num_events) 
-    # unc_cos_sqr_3 = np.sqrt((np.mean(data3**4) - exp_sqr_cos_3**2)/num_events)
-
-    # f0_1 = 2 - 5 * exp_sqr_cos_1
-    # fR_1 = -0.5 + exp_cos_1 + 2.5 * exp_sqr_cos_1
-    # fL_1 = -0.5 - exp_cos_1 + 2.5 * exp_sqr_cos_1
-
-    # sigma_f0_1 = 5 * unc_cos_sqr_1
-    # sigma_fR_1 = np.sqrt( (unc_cos_1**2) + 2.5**2 * unc_cos_sqr_1**2 )
-    
-    # print(f"f0_1: {f0_1} +- {sigma_f0_1}")
-    # print(f"fL_1: {fL_1} +- {sigma_fR_1}")
-    # print(f"fR_1: {fR_1} +- {sigma_fR_1}")
-
-
-    # f0_3 = 2 - 5 * exp_sqr_cos_3
-    # fR_3 = -0.5 - exp_cos_3 + 2.5 * exp_sqr_cos_3
-    # fL_3 = -0.5 + exp_cos_3 + 2.5 * exp_sqr_cos_3
-
-    # sigma_f0_3 = 5 * unc_cos_sqr_3
-    # sigma_fR_3 = np.sqrt( (unc_cos_3**2) + 2.5**2 * unc_cos_sqr_3**2 )
-    
-    # print(f"f0_3: {f0_3} +- {sigma_f0_3}")
-    # print(f"fL_3: {fL_3} +- {sigma_fR_3}")
-    # print(f"fR_3: {fR_3} +- {sigma_fR_3}")
-
-
-
     def R_c():
         top = 1 - 4*np.sqrt(5*np.pi)*alpha21() - 4*np.sqrt(5*np.pi)*alpha23() + 80*np.pi*gamma2020()
         bottom = 1 - 4*np.sqrt(5*np.pi)*alpha21() - 4*np.sqrt(5*np.pi)*alpha23() + 80*np.pi*alpha21()*alpha23()
         return top/bottom
 
-    #print(f"R_c quantity: {R_c()}")
 
     parameters = {
         'alpha11': alpha11(),
@@ -172,14 +132,14 @@ def write_results_to_file(output_file, params, uncs):
 # Read cos(theta) values for mu+, e+, and mu- datasets
 theta_path_1 = os.path.join(WW_path, "e+/theta_data_1.txt")
 theta_path_3 = os.path.join(WW_path, "mu-/theta_data_1.txt")
-data1 = read_data(theta_path_1)
-data3 = read_data(theta_path_3)
+data1 = np.loadtxt(theta_path_1)
+data3 = np.loadtxt(theta_path_3)
 
 # Read phi values for mu+, e+, and mu- datasets
 phi_path_1 = os.path.join(WW_path, "e+/phi_data_1.txt")
 phi_path_3 = os.path.join(WW_path, "mu-/phi_data_1.txt")
-phi_data1 = read_data(phi_path_1)
-phi_data3 = read_data(phi_path_3)
+phi_data1 = np.loadtxt(phi_path_1)
+phi_data3 = np.loadtxt(phi_path_3)
 
 # Calculate parameters and uncertainties
 parameters, uncertainties = calculate_parameters(data1, data3, phi_data1, phi_data3)

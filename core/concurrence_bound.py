@@ -6,20 +6,20 @@ def purity(density_matrix):
     """
     return np.trace(density_matrix @ density_matrix)
 
-def partial_trace(density_matrix, subsystem):
+def partial_trace(density_matrix, subsystem, dim):
     """
     Calculate the partial trace of a density matrix over a subsystem.
     """
-    rho_sub = np.zeros((3, 3), dtype=np.complex128)
+    rho_sub = np.zeros((dim, dim), dtype=np.complex128)
     if subsystem == 1:
-        for i in range(3):
-            for j in range(3):
-                rho_sub[i, j] = np.sum(density_matrix[k * 3 + i, k * 3 + j] for k in range(3))
+        for i in range(dim):
+            for j in range(dim):
+                rho_sub[i, j] = np.sum(density_matrix[k * dim + i, k * dim + j] for k in range(dim))
         return rho_sub
     elif subsystem == 2:
-        for i in range(3):
-            for j in range(3):
-                rho_sub[i, j] = np.sum(density_matrix[i * 3 + k, j * 3 + k] for k in range(3))
+        for i in range(dim):
+            for j in range(dim):
+                rho_sub[i, j] = np.sum(density_matrix[i * dim + k, j * dim + k] for k in range(dim))
         return rho_sub
     else:
         raise ValueError("subsystem must be 1 or 2")
@@ -45,8 +45,8 @@ def concurrence_lower(density_matrix):
     """
     Calculate the lower bound of the concurrence of a bipartite qutrit state.
     """
-    rho_A = partial_trace(density_matrix, 1)
-    rho_B = partial_trace(density_matrix, 2)
+    rho_A = partial_trace(density_matrix, 1, 3)
+    rho_B = partial_trace(density_matrix, 2, 3)
     purity_A = np.real(purity(rho_A))
     purity_B = np.real(purity(rho_B))
     total_purity = np.real(purity(density_matrix))
@@ -63,8 +63,8 @@ def concurrence_upper(density_matrix):
     """
     Calculate the upper bound of the concurrence of a bipartite qutrit state.
     """
-    rho_A = partial_trace(density_matrix, 1)
-    rho_B = partial_trace(density_matrix, 2)
+    rho_A = partial_trace(density_matrix, 1, 3)
+    rho_B = partial_trace(density_matrix, 2, 3)
     purity_A = np.real(purity(rho_A))
     purity_B = np.real(purity(rho_B))
     return 2 * min(1 - purity_A, 1 - purity_B)

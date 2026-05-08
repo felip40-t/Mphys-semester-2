@@ -160,7 +160,7 @@ Optional but recommended for LO+PS runs: install `pythia8` and `lhapdf6` from wi
 ### 3. Verify the installation
 
 ```bash
-cd MG5_aMC_v3_5_6
+cd MG5_aMC
 python3 bin/mg5_aMC
 ```
 

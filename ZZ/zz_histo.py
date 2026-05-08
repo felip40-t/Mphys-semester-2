@@ -1,7 +1,6 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-from utils.histo_plotter import read_data
 from config import ZZ_RAW_DIR
 
 base_path = ZZ_RAW_DIR
@@ -13,8 +12,8 @@ data_dir_mu_plus = os.path.join(base_path, "mu+/theta_data_4_new.txt")
 
 
 # Read data for both e- and e+ from run 4
-cos_theta_values_mu_plus = np.cos(read_data(data_dir_mu_plus))
-cos_theta_values_e_plus = np.cos(read_data(data_dir_e_plus))
+cos_theta_values_mu_plus = np.cos(np.loadtxt(data_dir_mu_plus))
+cos_theta_values_e_plus = np.cos(np.loadtxt(data_dir_e_plus))
 
 # Number of bins for the histogram
 num_bins = 40

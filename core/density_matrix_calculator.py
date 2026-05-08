@@ -1,5 +1,4 @@
 import numpy as np
-import csv
 
 sqrt3 = np.sqrt(3)
 sqrt3_2 = np.sqrt(3/2)
@@ -34,14 +33,6 @@ lambda_8 = 1/np.sqrt(3) * np.array([[1,0,0],[0,1,0],[0,0,-2]])
 lambda_operators = {0: lambda_1, 1: lambda_2, 2: lambda_3, 3: lambda_4, 4: lambda_5, 5: lambda_6, 6: lambda_7, 7: lambda_8}
 
 O_bell_prime1 = -2/sqrt3 * (np.kron(S_x, S_x) + np.kron(S_y, S_y)) + np.kron(lambda_4, lambda_4) + np.kron(lambda_5, lambda_5)
- 
-#O_bell_prime2 = ( 4 / np.sqrt(27)) * ( np.kron(T1_1, T1_1) + np.kron(T1_m1, T1_m1) ) + ( 2 / 3 ) * ( np.kron(T2_2, T2_2) + np.kron(T2_m2, T2_m2) )
-
-# np.set_printoptions(precision=3, suppress=True)
-# print("O_bell_prime1:")
-# print(O_bell_prime1.real)
-# print("\nO_bell_prime2:")
-# print(O_bell_prime2)
 
 
 def calculate_density_matrix_AC(A_coefficients, C_coefficients):

@@ -1,6 +1,5 @@
 import os
 import numpy as np
-from utils.histo_plotter import read_data
 from config import MG5_INSTALL_DIR  # also bootstraps src/ onto sys.path
 from diboson.physics.kinematics import boostinvp, calc_inv_mass, calc_scattering_angle, phistar
 
@@ -17,7 +16,7 @@ particle_directories = {
 
 def main():
 
-    particle_arrays = {particle_name: read_data(os.path.join(directory, f"combined_data_temp.txt"))
+    particle_arrays = {particle_name: np.loadtxt(os.path.join(directory, "combined_data_temp.txt"), delimiter=',')
                       for particle_name, directory in particle_directories.items()}
 
     diboson_array = sum(particle_arrays.values())
@@ -32,7 +31,7 @@ def main():
         wp_boosted_list.append(wp_boosted)
     wp_boosted = np.array(wp_boosted_list)
 
-    cos_psi = np.array([calc_scattering_angle(wp_boosted[i] for i in range(len(wp_boosted)))])
+    cos_psi = np.array([calc_scattering_angle(wp_boosted[i]) for i in range(len(wp_boosted))])
     file_path_psi = os.path.join(process_dir, f"Plots and data/psi_data_combined_temp.txt")
     np.savetxt(file_path_psi, cos_psi)
 

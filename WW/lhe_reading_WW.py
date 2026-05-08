@@ -42,7 +42,7 @@ def find_latest_run_dir(base_dir):
     """
     Efficiently find the latest 'run_*' directory.
     """
-    run_dirs = glob(os.path.join(base_dir, 'run_*'))
+    run_dirs = glob.glob(os.path.join(base_dir, 'run_*'))
     
     if not run_dirs:
         raise FileNotFoundError("No run directories found.")
@@ -93,7 +93,7 @@ def process_last_run(base_dir, particle_directories):
     print(f"Processing latest run directory: {latest_run_dir}")
     
     # Locate LHE file in the latest run directory
-    lhe_file = glob(os.path.join(latest_run_dir, "*.lhe.gz"))
+    lhe_file = glob.glob(os.path.join(latest_run_dir, "*.lhe.gz"))
     if not lhe_file:
         raise FileNotFoundError("No LHE file found in the latest run directory.")
     
@@ -110,7 +110,7 @@ def process_multiple_runs(base_dir, particle_directories, run_number_start, run_
         print(f"Processing run directory: {run_dir}")
 
         # Locate LHE file in the run directory
-        lhe_file = glob(os.path.join(run_dir, "*.lhe.gz"))
+        lhe_file = glob.glob(os.path.join(run_dir, "*.lhe.gz"))
         if not lhe_file:
             raise FileNotFoundError("No LHE file found in the run directory.")
         
