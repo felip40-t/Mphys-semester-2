@@ -34,11 +34,11 @@ def check_density_matrix(rho):
     is_normalized = np.isclose(trace, 1)
     print("Is normalized (Trace = 1):", is_normalized)
     # Check if positive semi-definite: all eigenvalues >= 0
-    eigenvalues = np.linalg.eigvalsh(rho) 
+    eigenvalues = np.linalg.eigvalsh(rho)
     is_positive_semi_definite = np.all(eigenvalues >= -1e-10)  # Allow small numerical tolerance
     print("Eigenvalues:", eigenvalues)
     print("Is positive semi-definite:", is_positive_semi_definite)
-    
+
     return is_hermitian and is_positive_semi_definite and is_normalized
 
 def concurrence_lower(density_matrix):

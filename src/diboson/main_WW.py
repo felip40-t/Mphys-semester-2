@@ -1,11 +1,11 @@
 import numpy as np
 import os
 
-from coefficient_calculator_WW import calculate_coefficients_fgh, calculate_variance_fgh
-from core.density_matrix_calculator import calculate_density_matrix_fgh
-from core.Bell_inequality_optimizer import bell_inequality_optimization
+from diboson.physics.coefficients import calculate_coefficients_fgh, calculate_variance_fgh
+from diboson.physics.density_matrix import calculate_density_matrix_fgh
+from diboson.physics.bell_optimiser import bell_inequality_optimization
 
-from core.concurrence_bound import concurrence_lower
+from diboson.physics.concurrence import concurrence_lower
 
 from config import WW_RAW_DIR, WW_PROCESSED_DIR, WW_PLOTS_DIR, WW_ETA, N_COS_BINS  # also bootstraps src/ onto sys.path
 

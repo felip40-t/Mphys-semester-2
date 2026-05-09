@@ -16,16 +16,16 @@ import matplotlib.pyplot as plt
 
 from diboson.plotting.style import FIGSIZE_HEATMAP, FONTSIZE_LABEL, FONTSIZE_TICK, FONTSIZE_ANNOTATION
 from config import COS_BIN_MIN, COS_BIN_WIDTH, MASS_BIN_MIN, MASS_BIN_WIDTH
-from core.density_matrix_calculator import (
+from diboson.physics.density_matrix import (
     O_bell_prime1,
     project_to_psd,
     unphysicality_score,
 )
-from core.Bell_inequality_optimizer import (
+from diboson.physics.bell_optimiser import (
     bell_inequality_optimization,
     optimal_bell_operator,
 )
-from core.concurrence_bound import concurrence_lower, check_density_matrix
+from diboson.physics.concurrence import concurrence_lower, check_density_matrix
 
 
 @dataclass

@@ -52,9 +52,9 @@ def calculate_density_matrix_AC(A_coefficients, C_coefficients):
         T1_op = T1_operators[m1] if l1 == 1 else T2_operators[m1]
         T2_op = T1_operators[m3] if l3 == 1 else T2_operators[m3]
         density_matrix += C_value * np.kron(T1_op, T2_op)
-    
+
     density_matrix *= 1/9
-    
+
     return density_matrix
 
 def calculate_density_matrix_fgh(f_coefficients, g_coefficients, h_coefficients):
@@ -77,15 +77,15 @@ def gradual_shift_func(x, a):
 def project_to_psd(rho, const, normalize_trace=True):
     """
     Project a Hermitian matrix rho to the nearest positive semi-definite matrix.
-    
+
     Parameters:
         rho (np.ndarray): Hermitian matrix to be projected (e.g., 9x9).
         normalize_trace (bool): Whether to renormalize to trace 1.
-    
+
     Returns:
         np.ndarray: PSD matrix closest to rho.
     """
-    
+
     # Eigen-decomposition
     eigenvalues, eigenvectors = np.linalg.eigh(rho)
 
@@ -100,16 +100,16 @@ def project_to_psd(rho, const, normalize_trace=True):
 
     # Ensure the matrix is Hermitian
     rho_psd = (rho_psd + rho_psd.conj().T) / 2
-    
+
     return rho_psd
 
 def unphysicality_score(density_matrix):
     """
     Calculate the unphysicality score of a density matrix.
-    
+
     Parameters:
         density_matrix (np.ndarray): Density matrix to evaluate.
-    
+
     Returns:
         float: Unphysicality score (trace of the difference between the density matrix and its PSD projection).
     """
@@ -122,5 +122,5 @@ def unphysicality_score(density_matrix):
         # Calculate the unphysicality score
         if eigenvalues[i] < 0:
             score += abs(eigenvalues[i])
-    
+
     return score / np.max(eigenvalues)

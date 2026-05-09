@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.optimize import differential_evolution
-from core.Unitary_Matrix import euler_unitary_matrix
+from diboson.physics.unitary_matrix import euler_unitary_matrix
 
 def optimal_bell_operator(O_bell_prime, parameters):
         """
@@ -11,7 +11,7 @@ def optimal_bell_operator(O_bell_prime, parameters):
         U = euler_unitary_matrix(*U_params)
         V = euler_unitary_matrix(*V_params)
         U_cross_V = np.kron(U, V)
-        
+
         O_bell = U_cross_V.conj().T @ O_bell_prime @ U_cross_V
         return O_bell
 

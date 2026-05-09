@@ -7,55 +7,9 @@ import numpy as np
 import glob
 import tarfile
 from config import MG5_INSTALL_DIR  # noqa: F401  also bootstraps src/ onto sys.path
-from coefficient_calculator_ZZ import read_masked_data
+from diboson.physics.projectors import read_masked_data
 from diboson.physics.kinematics import boostinvp, calc_inv_mass, calc_scattering_angle, phistar
 
-
-def run_madgraph(mg5_install_dir, process_dir, energy, nevents):
-    """
-    Modify the run_card and execute the MadGraph5 process.
-    """
-    run_card_path = os.path.join(process_dir, 'Cards', 'run_card.dat')
-    
-    # Modify run_card in-memory to avoid multiple file I/O
-    with open(run_card_path, 'r') as file:
-        run_card = file.readlines()
-    
-    energy_half = energy / 2
-    for i, line in enumerate(run_card):
-        if 'ebeam1' in line:
-            run_card[i] = f"  {energy_half}    = ebeam1 ! beam 1 total energy in GeV\n"
-        elif 'ebeam2' in line:
-            run_card[i] = f"  {energy_half}    = ebeam2 ! beam 2 total energy in GeV\n"
-        elif 'nevents' in line:
-            run_card[i] = f"  {nevents}    = nevents ! Number of unweighted events requested\n"
-
-    with open(run_card_path, 'w') as file:
-        file.writelines(run_card)
-
-    # Run the MadGraph process using subprocess, streamlined
-    subprocess.run(
-        [os.path.join(mg5_install_dir, 'bin', 'mg5_aMC')],
-        input='launch pp_ZZ_SM\n', text=True,
-        cwd=process_dir, check=True
-    )
-
-
-def find_latest_run_dir(base_dir):
-    """
-    Efficiently find the latest 'run_*' directory.
-    """
-    run_dirs = glob.glob(os.path.join(base_dir, 'run_*'))
-    
-    if not run_dirs:
-        raise FileNotFoundError("No run directories found.")
-    
-    # Extract run numbers and find the max
-    run_numbers = [int(d.split('_')[-1]) for d in run_dirs]
-    latest_run_number = max(run_numbers)
-    latest_run_dir = f"run_{latest_run_number:02d}"
-    
-    return os.path.join(base_dir, latest_run_dir), latest_run_number
 
 
 def read_lhe_write_data(lhe_file_path, particle_directories, number):

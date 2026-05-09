@@ -1,11 +1,11 @@
 import numpy as np
 import os
 
-from coefficient_calculator_ZZ import calculate_coefficients_AC, calculate_variance_AC
-from core.density_matrix_calculator import calculate_density_matrix_AC
-from core.Bell_inequality_optimizer import bell_inequality_optimization
+from diboson.physics.coefficients import calculate_coefficients_AC, calculate_variance_AC
+from diboson.physics.density_matrix import calculate_density_matrix_AC
+from diboson.physics.bell_optimiser import bell_inequality_optimization
 
-from core.concurrence_bound import concurrence_lower
+from diboson.physics.concurrence import concurrence_lower
 
 from config import ZZ_RAW_DIR, ZZ_PROCESSED_DIR, ZZ_PLOTS_DIR, ZZ_ETA, N_COS_BINS  # also bootstraps src/ onto sys.path
 

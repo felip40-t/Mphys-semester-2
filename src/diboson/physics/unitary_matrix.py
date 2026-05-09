@@ -3,12 +3,12 @@ import numpy as np
 def euler_unitary_matrix(theta12, theta13, theta23, delta, alpha1, alpha2):
     """
     Construct a general U(3) matrix from 3 mixing angles and 3 phases.
-    
+
     Args:
         theta12, theta13, theta23: Euler angles (in radians).
         delta: CP-violating phase (for SU(3) structure).
         alpha1, alpha2: Majorana-like phases (for U(3) completion).
-    
+
     Returns:
         A 3x3 unitary U(3) matrix.
     """
