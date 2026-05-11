@@ -2,7 +2,7 @@ import numpy as np
 from scipy.special import sph_harm_y
 
 from diboson.physics.density_matrix import T1_operators, T2_operators, lambda_operators
-from config import ZZ_ETA as _ZZ_ETA, ZZ_G_L as _g_L, ZZ_G_R as _g_R
+from diboson.config import ZZ_ETA as _ZZ_ETA, ZZ_G_L as _g_L, ZZ_G_R as _g_R
 from diboson.physics.projectors import (
     plus_minus, projector_1, projector_2, projector_3, projector_4,
     projector_5, projector_6, projector_7, projector_8, projector_vector,
@@ -33,17 +33,15 @@ a_matrix = (1 / (_g_R**2 - _g_L**2)) * np.array([
 # ZZ: AC coefficients
 # ---------------------------------------------------------------------------
 
-def calculate_coefficients_AC(theta_paths, phi_paths, mask=None):
+def calculate_coefficients_AC(theta_paths, phi_paths):
     """
     Calculate the A and C coefficients and return them as dictionaries.
     If a mask is provided, it will be applied to the data.
+    Important to note that the angular data is stored in .npy files.
     """
-    theta_values = {1: np.loadtxt(theta_paths[1]), 3: np.loadtxt(theta_paths[3])}
-    phi_values = {1: np.loadtxt(phi_paths[1]), 3: np.loadtxt(phi_paths[3])}
 
-    if mask is not None:
-        theta_values = {key: theta[mask] for key, theta in theta_values.items()}
-        phi_values = {key: phi[mask] for key, phi in phi_values.items()}
+    theta_values = {1: np.load(theta_paths[1]), 3: np.load(theta_paths[3])}
+    phi_values = {1: np.load(phi_paths[1]), 3: np.load(phi_paths[3])}
 
     A_coefficients = {1: {}, 3: {}}
     C_coefficients = {}
@@ -110,8 +108,8 @@ def calculate_variance_AC(theta_paths, phi_paths, O):
     """
     Calculate the variance of the Bell operator (ZZ/AC basis).
     """
-    theta_values = {1: np.loadtxt(theta_paths[1]), 3: np.loadtxt(theta_paths[3])}
-    phi_values = {1: np.loadtxt(phi_paths[1]), 3: np.loadtxt(phi_paths[3])}
+    theta_values = {1: np.load(theta_paths[1]), 3: np.load(theta_paths[3])}
+    phi_values = {1: np.load(phi_paths[1]), 3: np.load(phi_paths[3])}
     n_samples = len(theta_values[1])
 
     non_zero_A1, non_zero_A3, non_zero_C = _find_nonzero_trace_terms_AC(O)
@@ -155,8 +153,8 @@ def calculate_coefficients_fgh(theta_paths, phi_paths):
     """
     Calculate the f, g, and h coefficients and return them as dictionaries.
     """
-    theta_values = {1: np.loadtxt(theta_paths[1]), 3: np.loadtxt(theta_paths[3])}
-    phi_values = {1: np.loadtxt(phi_paths[1]), 3: np.loadtxt(phi_paths[3])}
+    theta_values = {1: np.load(theta_paths[1]), 3: np.load(theta_paths[3])}
+    phi_values = {1: np.load(phi_paths[1]), 3: np.load(phi_paths[3])}
 
     f_coefficients = np.zeros(8)
     g_coefficients = np.zeros(8)
@@ -207,8 +205,8 @@ def calculate_variance_fgh(theta_paths, phi_paths, O):
     """
     Calculate the variance of the Bell operator (WW/fgh basis).
     """
-    theta_values = {1: np.loadtxt(theta_paths[1]), 3: np.loadtxt(theta_paths[3])}
-    phi_values = {1: np.loadtxt(phi_paths[1]), 3: np.loadtxt(phi_paths[3])}
+    theta_values = {1: np.load(theta_paths[1]), 3: np.load(theta_paths[3])}
+    phi_values = {1: np.load(phi_paths[1]), 3: np.load(phi_paths[3])}
     n_samples = len(theta_values[1])
 
     p_1 = 0.5 * projector_vector(theta_values[1], phi_values[1], 1)

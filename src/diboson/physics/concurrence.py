@@ -14,12 +14,12 @@ def partial_trace(density_matrix, subsystem, dim):
     if subsystem == 1:
         for i in range(dim):
             for j in range(dim):
-                rho_sub[i, j] = np.sum(density_matrix[k * dim + i, k * dim + j] for k in range(dim))
+                rho_sub[i, j] = sum(density_matrix[k * dim + i, k * dim + j] for k in range(dim))
         return rho_sub
     elif subsystem == 2:
         for i in range(dim):
             for j in range(dim):
-                rho_sub[i, j] = np.sum(density_matrix[i * dim + k, j * dim + k] for k in range(dim))
+                rho_sub[i, j] = sum(density_matrix[i * dim + k, j * dim + k] for k in range(dim))
         return rho_sub
     else:
         raise ValueError("subsystem must be 1 or 2")

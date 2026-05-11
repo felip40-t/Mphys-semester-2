@@ -15,7 +15,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from diboson.plotting.style import FIGSIZE_HEATMAP, FONTSIZE_LABEL, FONTSIZE_TICK, FONTSIZE_ANNOTATION
-from config import COS_BIN_MIN, COS_BIN_WIDTH, MASS_BIN_MIN, MASS_BIN_WIDTH
+from diboson.config import COS_BIN_MIN, COS_BIN_WIDTH, MASS_BIN_MIN, MASS_BIN_WIDTH
 from diboson.physics.density_matrix import (
     O_bell_prime1,
     project_to_psd,

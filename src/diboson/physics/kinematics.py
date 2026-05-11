@@ -1,187 +1,141 @@
-"""Process-independent relativistic kinematics: Lorentz boosts, rotations, and decay-angle reconstruction."""
+"""Process-independent relativistic kinematics: Lorentz boosts, rotations, and decay-angle reconstruction.
+
+All functions operate on batched inputs:
+  - 4-momenta: (N, 4) arrays ordered (E, px, py, pz)
+  - 3-momenta: (N, 3) arrays ordered (px, py, pz)
+"""
 
 import numpy as np
 
 
-def boostinvp(q, pboost, qprime=None):
+def lorentz_boost(p_in, p_frame):
     """
-    Boost routine for relativistic transformations.
-    Boosts a 4-momentum into a different reference frame.
+    Lorentz boost a batch of 4-momenta into a new frame.
 
-    Parameters:
-    -----------
-    q : numpy.ndarray
-        4-momentum to be boosted (E, px, py, pz)
-    pboost : numpy.ndarray
-        4-momentum defining the boost (E, px, py, pz)
-    qprime : numpy.ndarray, optional
-        Array to store the result, if None a new array is created
+    Parameters
+    ----------
+    p_in : (N, 4) array
+        4-momenta to boost (E, px, py, pz).
+    p_frame : (N, 4) array
+        4-momenta defining the target frame.
 
-    Returns:
-    --------
-    qprime : numpy.ndarray
-        Boosted 4-momentum (E, px, py, pz)
+    Returns
+    -------
+    p_out : (N, 4) array
     """
-    if qprime is None:
-        qprime = np.zeros(4)
+    m2 = p_frame[:, 0]**2 - np.sum(p_frame[:, 1:]**2, axis=1)
+    m = np.sqrt(np.maximum(m2, 0.0))
 
-    # Calculate invariant mass squared of pboost
-    rmboost = pboost[0]**2 - pboost[1]**2 - pboost[2]**2 - pboost[3]**2
-    rmboost = np.sqrt(max(rmboost, 0.0))
+    e_boosted = (p_in[:, 0]*p_frame[:, 0] - np.einsum('ij,ij->i', p_in[:, 1:], p_frame[:, 1:])) / m
+    proj = (e_boosted + p_in[:, 0]) / (p_frame[:, 0] + m)
 
-    # Calculate scalar product
-    aux = (q[0]*pboost[0] - q[1]*pboost[1] - q[2]*pboost[2] - q[3]*pboost[3]) / rmboost
-    aaux = (aux + q[0]) / (pboost[0] + rmboost)
-
-    # Apply the boost
-    qprime[0] = aux
-    qprime[1] = q[1] - aaux * pboost[1]
-    qprime[2] = q[2] - aaux * pboost[2]
-    qprime[3] = q[3] - aaux * pboost[3]
-
-    return qprime
+    p_out = np.empty_like(p_in)
+    p_out[:, 0] = e_boosted
+    p_out[:, 1:] = p_in[:, 1:] - proj[:, np.newaxis] * p_frame[:, 1:]
+    return p_out
 
 
-def rotinvp(p, q, pp=None):
+def calc_decay_angles(p1, p2, p3, p4):
     """
-    Rotation routine for relativistic transformations.
-    Rotates a 3-momentum vector.
+    Calculate azimuthal and polar decay angles for a batch of events.
 
-    Parameters:
-    -----------
-    p : numpy.ndarray
-        3-momentum to be rotated (px, py, pz)
-    q : numpy.ndarray
-        3-momentum defining the rotation axis (px, py, pz)
-    pp : numpy.ndarray, optional
-        Array to store the result, if None a new array is created
+    All angles are in the helicity frame: each boson is boosted to its rest frame
+    with the quantisation axis along its CM-frame flight direction n.
 
-    Returns:
-    --------
-    pp : numpy.ndarray
-        Rotated 3-momentum (px, py, pz)
+    theta -- polar angle between the decay product and n -- is read directly from
+    the dot product with n.
+
+    phi -- azimuthal angle around n -- uses a right-handed helicity basis (x, y, n)
+    built via two cross products:
+        y = (z x n) / |z x n|   (z = beam axis; out-of-scattering-plane)
+        x = y x n                (in-scattering-plane, perpendicular to n) - > No need
+        to explicitly normalise since it is already unit length by construction. 
+    phi = arctan2(p.y, p.x). Projecting directly onto x and y is equivalent to
+    first computing p_perp = p - (p.n)n and then measuring its azimuth, because
+    x and y are both perpendicular to n so the parallel component projects to zero.
+
+    Parameters
+    ----------
+    p1, p2 : (N, 4) arrays
+        4-momenta of the decay products of boson 1.
+    p3, p4 : (N, 4) arrays
+        4-momenta of the decay products of boson 2.
+
+    Returns
+    -------
+    phi1, phi3, theta1, theta3 : (N,) arrays
     """
-    if pp is None:
-        pp = np.zeros(3)
+    p_b1 = p1 + p2
+    p_b2 = p3 + p4
+    p_tot = p_b1 + p_b2
 
-    # Calculate transverse and total momentum
-    qmodt = q[0]**2 + q[1]**2
-    qmod = qmodt + q[2]**2
+    p_b1_cm = lorentz_boost(p_b1, p_tot)
+    p_b2_cm = lorentz_boost(p_b2, p_tot)
+    p1_cm   = lorentz_boost(p1,   p_tot)
+    p3_cm   = lorentz_boost(p3,   p_tot)
 
-    qmodt = np.sqrt(qmodt)
-    qmod = np.sqrt(qmod)
+    p1_rest = lorentz_boost(p1_cm, p_b1_cm)
+    p3_rest = lorentz_boost(p3_cm, p_b2_cm)
 
-    if qmod == 0.0:
-        raise ValueError("ERROR in subroutine rotinvp: spatial q components are 0.0!")
+    # Unit vectors along each boson's flight direction in the CM frame
+    n1 = p_b1_cm[:, 1:] / np.linalg.norm(p_b1_cm[:, 1:], axis=1, keepdims=True)
+    n3 = p_b2_cm[:, 1:] / np.linalg.norm(p_b2_cm[:, 1:], axis=1, keepdims=True)
 
-    cth = q[2] / qmod
-    sth = 1.0 - cth**2
+    p1_3vec = p1_rest[:, 1:]
+    p3_3vec = p3_rest[:, 1:]
 
-    if sth == 0.0:
-        pp[0] = p[0]
-        pp[1] = p[1]
-        pp[2] = p[2]
-        return pp
+    # theta: angle between decay product and boson direction
+    cos_t1 = np.einsum('ij,ij->i', p1_3vec, n1) / np.linalg.norm(p1_3vec, axis=1) # use scalar product for angle calculation
+    cos_t3 = np.einsum('ij,ij->i', p3_3vec, n3) / np.linalg.norm(p3_3vec, axis=1)
+    theta1 = np.arccos(np.clip(cos_t1, -1.0, 1.0))
+    theta3 = np.arccos(np.clip(cos_t3, -1.0, 1.0))
 
-    sth = np.sqrt(sth)
+    # phi: build right-handed helicity basis (x, y, n) via successive cross products
+    n1p = np.sqrt(n1[:, 0]**2 + n1[:, 1]**2)  # transverse magnitude of flight direction
+    n3p = np.sqrt(n3[:, 0]**2 + n3[:, 1]**2)
+    s1 = np.where(n1p > 0, n1p, 1.0)  # guard: n aligned with beam has no unique perp plane
+    s3 = np.where(n3p > 0, n3p, 1.0)
 
-    if qmodt == 0.0:
-        pp[0] = p[0]
-        pp[1] = p[1]
-        pp[2] = p[2]
-        return pp
+    # y = (z x n) / n1p
+    y1 = np.column_stack([-n1[:, 1]/s1,            n1[:, 0]/s1,          np.zeros(len(n1))])
+    y3 = np.column_stack([-n3[:, 1]/s3,            n3[:, 0]/s3,          np.zeros(len(n3))])
+    # x = y x n
+    x1 = np.column_stack([ n1[:, 2]*n1[:, 0]/s1,  n1[:, 2]*n1[:, 1]/s1, -s1])
+    x3 = np.column_stack([ n3[:, 2]*n3[:, 0]/s3,  n3[:, 2]*n3[:, 1]/s3, -s3])
 
-    cfi = q[0] / qmodt
-    sfi = q[1] / qmodt
-
-    # Store p values to avoid problems if p and pp are the same vector
-    p1 = p[0]
-    p2 = p[1]
-    p3 = p[2]
-
-    # Perform the rotation
-    pp[0] = cth * cfi * p1 + cth * sfi * p2 - sth * p3
-    pp[1] = -sfi * p1 + cfi * p2
-    pp[2] = sth * cfi * p1 + sth * sfi * p2 + cth * p3
-
-    return pp
-
-
-def phistar(v1, v2, v3, v4):
-    """
-    Calculate azimuthal decay angles.
-    This function calculates the azimuthal decay angles in a specific reference frame.
-    The procedure follows these steps:
-    1. Boost all particles to the center-of-mass frame of the system
-    2. Rotate to align the bosons with the z-axis
-    3. Boost charged leptons to their respective boson rest frames
-    4. Calculate azimuthal angles
-    """
-    # Add the 4-vectors to get the combined systems
-    v12 = v1 + v2
-    v34 = v3 + v4
-    vv = v12 + v34
-
-    # Initialize arrays for all the boosted and rotated vectors
-    bv12 = np.zeros(4)
-    bv34 = np.zeros(4)
-    bv1 = np.zeros(4)
-    bv2 = np.zeros(4)
-    bv3 = np.zeros(4)
-    bv4 = np.zeros(4)
-
-    # Boost into the center-of-mass frame of the entire system
-    boostinvp(v12, vv, bv12)
-    boostinvp(v34, vv, bv34)
-    boostinvp(v1, vv, bv1)
-    boostinvp(v2, vv, bv2)
-    boostinvp(v3, vv, bv3)
-    boostinvp(v4, vv, bv4)
-
-    # Create vectors for the rotated particles
-    bbv1 = np.zeros(4)
-    bbv2 = np.zeros(4)
-    bbv3 = np.zeros(4)
-    bbv4 = np.zeros(4)
-
-    # Keep the energy component unchanged
-    bbv1[0] = bv1[0]
-    bbv2[0] = bv2[0]
-    bbv3[0] = bv3[0]
-    bbv4[0] = bv4[0]
-
-    # Rotate the spatial components to align with z-axis
-    rotinvp(bv1[1:4], bv12[1:4], bbv1[1:4])
-    rotinvp(bv2[1:4], bv12[1:4], bbv2[1:4])
-    rotinvp(bv3[1:4], bv34[1:4], bbv3[1:4])
-    rotinvp(bv4[1:4], bv34[1:4], bbv4[1:4])
-
-    # Combine the rotated vectors
-    bbv12 = bbv1 + bbv2
-    bbv34 = bbv3 + bbv4
-
-    # Final boost to each boson rest frame
-    bbbv1 = np.zeros(4)
-    bbbv3 = np.zeros(4)
-    boostinvp(bbv1, bbv12, bbbv1)
-    boostinvp(bbv3, bbv34, bbbv3)
-    # Calculate the azimuthal angles
-    phi1 = np.arctan2(bbbv1[2], bbbv1[1])  # Using components 2,1 for y,x
-    phi3 = np.arctan2(bbbv3[2], bbbv3[1])
-
-    # Calculate polar angles
-    theta1 = np.arccos(bbbv1[3] / np.linalg.norm(bbbv1[1:4]))
-    theta3 = np.arccos(bbbv3[3] / np.linalg.norm(bbbv3[1:4]))
+    phi1 = np.arctan2(np.einsum('ij,ij->i', p1_3vec, y1), np.einsum('ij,ij->i', p1_3vec, x1))
+    phi3 = np.arctan2(np.einsum('ij,ij->i', p3_3vec, y3), np.einsum('ij,ij->i', p3_3vec, x3))
 
     return phi1, phi3, theta1, theta3
 
 
 def calc_scattering_angle(parent_4_mom):
-    parent_axis = parent_4_mom[1:] / np.linalg.norm(parent_4_mom[1:])
-    beam_axis = np.array([0, 0, 1])
-    cos_psi = parent_axis @ beam_axis
-    return cos_psi
+    """
+    Cosine of the scattering angle w.r.t. the beam axis for a batch.
+
+    Parameters
+    ----------
+    parent_4_mom : (N, 4) array
+
+    Returns
+    -------
+    cos_psi : (N,) array
+    """
+    p3 = parent_4_mom[:, 1:]
+    return p3[:, 2] / np.linalg.norm(p3, axis=1)
 
 
 def calc_inv_mass(four_vec):
-    return np.sqrt(four_vec[0]**2 - np.sum(four_vec[1:]**2))
+    """
+    Invariant mass for a batch of 4-momenta.
+
+    Parameters
+    ----------
+    four_vec : (N, 4) array
+
+    Returns
+    -------
+    mass : (N,) array
+    """
+    m2 = four_vec[:, 0]**2 - np.sum(four_vec[:, 1:]**2, axis=1)
+    return np.sqrt(np.maximum(m2, 0.0))
