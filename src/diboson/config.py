@@ -39,12 +39,10 @@ for _d in [ZZ_RAW_DIR, WW_RAW_DIR, ZZ_PROCESSED_DIR, WW_PROCESSED_DIR, ZZ_PLOTS_
 COM_ENERGY = 13_000  # GeV
 NEVENTS = 50_000
 
-# ZZ electroweak coupling constants (muon coupling to Z boson).
+# ZZ electroweak coupling constants.
 ZZ_G_L = -0.26953
 ZZ_G_R = 0.2317
 
-# Acceptance-efficiency corrections for coefficient extraction.
-# ZZ: empirical correction from detector acceptance; WW: no correction applied (ETA=1).
 ZZ_ETA = 0.213
 WW_ETA = 1.0
 

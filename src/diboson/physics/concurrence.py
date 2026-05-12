@@ -53,10 +53,8 @@ def concurrence_lower(density_matrix):
     conc_lb = 2 * max(0, total_purity - purity_A, total_purity - purity_B)
     if (conc_lb == 0):
         return 0
-    elif (conc_lb == 2 * (total_purity - purity_A)):
-        return conc_lb
-    elif (conc_lb == 2 * (total_purity - purity_B)):
-        return conc_lb
+    else:
+        return np.sqrt(conc_lb)
 
 
 def concurrence_upper(density_matrix):

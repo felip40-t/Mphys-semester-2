@@ -3,10 +3,12 @@
 Usage:
     python src/diboson/main.py --process ZZ
     python src/diboson/main.py --process WW
-    python src/diboson/main.py --process ZZ --raw   # skip PSD projection
+    python src/diboson/main.py --process ZZ --raw        # skip PSD projection
+    python src/diboson/main.py --process ZZ --plot-only  # replot from saved grids
 """
 
 import argparse
+import time
 
 import numpy as np
 
@@ -17,6 +19,7 @@ from diboson.config import (
     N_COS_BINS,
     ZZ_N_MASS_BINS, WW_N_MASS_BINS,
     MASS_BIN_MIN, MASS_BIN_WIDTH,
+    COS_BIN_MIN, COS_BIN_WIDTH
 )
 from diboson.physics.coefficients import (
     calculate_coefficients_AC, calculate_variance_AC,
@@ -26,7 +29,7 @@ from diboson.physics.density_matrix import (
     calculate_density_matrix_AC,
     calculate_density_matrix_fgh,
 )
-from diboson.plotting.contour import plot_contour_heatmap
+from diboson.plotting.contour import plot_contour_heatmap, generate_unphysicality_heatmap
 from diboson.analysis.region_analysis import ProcessSpec, process_region as _process_region
 
 
@@ -53,7 +56,12 @@ _PROCESS_CONFIGS = {
             name="ZZ",
             n_mass_bins=ZZ_N_MASS_BINS,
             n_cos_bins=N_COS_BINS,
+            mass_width=MASS_BIN_WIDTH,
+            cos_width=COS_BIN_WIDTH,
             mass_max=MASS_BIN_MIN + ZZ_N_MASS_BINS * MASS_BIN_WIDTH,
+            cos_max=COS_BIN_MIN + N_COS_BINS * COS_BIN_WIDTH,
+            mass_min=MASS_BIN_MIN,
+            cos_min=COS_BIN_MIN,
             eta=ZZ_ETA,
             get_density_matrix=_zz_get_density_matrix,
             get_variance=calculate_variance_AC,
@@ -69,7 +77,12 @@ _PROCESS_CONFIGS = {
             name="WW",
             n_mass_bins=WW_N_MASS_BINS,
             n_cos_bins=N_COS_BINS,
+            mass_width=MASS_BIN_WIDTH,
+            cos_width=COS_BIN_WIDTH,
             mass_max=MASS_BIN_MIN + WW_N_MASS_BINS * MASS_BIN_WIDTH,
+            cos_max=COS_BIN_MIN + N_COS_BINS * COS_BIN_WIDTH,
+            mass_min=MASS_BIN_MIN,
+            cos_min=COS_BIN_MIN,
             eta=WW_ETA,
             get_density_matrix=_ww_get_density_matrix,
             get_variance=calculate_variance_fgh,
@@ -83,7 +96,7 @@ _PROCESS_CONFIGS = {
 }
 
 
-def run(process: str, raw: bool) -> None:
+def run(process: str, raw: bool, plot_only: bool = False) -> None:
     cfg = _PROCESS_CONFIGS[process]
     spec = cfg["spec"]
     raw_dir = cfg["raw_dir"]
@@ -93,7 +106,6 @@ def run(process: str, raw: bool) -> None:
     grid_name = f"{process}_{cfg['coeff_suffix']}_{label}"
 
     regions = spec.build_regions()
-    cos_psi_grid, inv_mass_grid = spec.grid_centers()
     shape = (spec.n_cos_bins, spec.n_mass_bins)
 
     def _load_grid(fname):
@@ -103,34 +115,42 @@ def run(process: str, raw: bool) -> None:
     bell_grid = _load_grid(f"bell_operator_grid_{grid_name}.npy")
     uncertainty_grid = _load_grid(f"uncertainty_grid_{grid_name}.npy")
     concurrence_grid = _load_grid(f"concurrence_grid_{grid_name}.npy")
+    unphysicality_grid = _load_grid(f"unphysicality_grid_{grid_name}.npy")
 
     params_path = processed_dir / f"optimal_params_grid_{grid_name}.npy"
     optimal_params_grid = np.load(params_path) if params_path.exists() else np.zeros((12, *shape))
 
-    for key in regions:
-        result = _process_region(
-            key, spec, raw_dir, regions,
-            calc_bell=True, calc_concurrence=True, raw=raw,
-        )
-        if result is None:
-            continue
-        i, j = key
-        bell_grid[i, j] = result['bell_value']
-        uncertainty_grid[i, j] = result['uncertainty_bell']
-        concurrence_grid[i, j] = result['concurrence_val']
-        optimal_params_grid[:, i, j] = result['optimal_params']
+    if not plot_only:
+        for key in regions:
+            time_start = time.time()
+            result = _process_region(
+                key, spec, raw_dir, regions,
+                calc_bell=True, calc_concurrence=True, raw=raw,
+            )
+            time_end = time.time()
+            print(f"Processed region {key} in {time_end - time_start:.2f} seconds.")
+            if result is None:
+                continue
+            i, j = key
+            bell_grid[i, j] = result['bell_value']
+            uncertainty_grid[i, j] = result['uncertainty_bell']
+            concurrence_grid[i, j] = result['concurrence_val']
+            unphysicality_grid[i, j] = result['unphysicality']
+            optimal_params_grid[:, i, j] = result['optimal_params']
 
-        np.save(processed_dir / f"bell_operator_grid_{grid_name}.npy", bell_grid)
-        np.save(processed_dir / f"concurrence_grid_{grid_name}.npy", concurrence_grid)
-        np.save(processed_dir / f"uncertainty_grid_{grid_name}.npy", uncertainty_grid)
-        np.save(processed_dir / f"optimal_params_grid_{grid_name}.npy", optimal_params_grid)
+            np.save(processed_dir / f"bell_operator_grid_{grid_name}.npy", bell_grid)
+            np.save(processed_dir / f"concurrence_grid_{grid_name}.npy", concurrence_grid)
+            np.save(processed_dir / f"uncertainty_grid_{grid_name}.npy", uncertainty_grid)
+            np.save(processed_dir / f"unphysicality_grid_{grid_name}.npy", unphysicality_grid)
+            np.save(processed_dir / f"optimal_params_grid_{grid_name}.npy", optimal_params_grid)
 
     bell_grid = np.load(processed_dir / f"bell_operator_grid_{grid_name}.npy")
     concurrence_grid = np.load(processed_dir / f"concurrence_grid_{grid_name}.npy")
+    unphysicality_grid = np.load(processed_dir / f"unphysicality_grid_{grid_name}.npy")
 
-    # .T aligns stored (n_cos, n_mass) grids with the (n_mass, n_cos) meshgrid from grid_centers()
-    plot_contour_heatmap(plots_dir, cos_psi_grid, inv_mass_grid, bell_grid.T, label, process)
-    plot_contour_heatmap(plots_dir, cos_psi_grid, inv_mass_grid, concurrence_grid.T, label, process, concurrence=True)
+    plot_contour_heatmap(plots_dir, spec, bell_grid, label)
+    plot_contour_heatmap(plots_dir, spec, concurrence_grid, label, concurrence=True)
+    generate_unphysicality_heatmap(spec, None, plots_dir, None, data=unphysicality_grid)
 
 
 def main() -> None:
@@ -139,8 +159,10 @@ def main() -> None:
                         help="Which diboson process to analyse.")
     parser.add_argument("--raw", action="store_true",
                         help="Skip PSD projection of the density matrix.")
+    parser.add_argument("--plot-only", action="store_true",
+                        help="Skip analysis and replot from already-saved grids.")
     args = parser.parse_args()
-    run(args.process, args.raw)
+    run(args.process, args.raw, args.plot_only)
 
 
 if __name__ == "__main__":

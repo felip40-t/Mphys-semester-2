@@ -7,6 +7,3 @@ FONTSIZE_LABEL = 16
 FONTSIZE_TICK = 14
 FONTSIZE_ANNOTATION = 12
 
-CONCURRENCE_CMAP = LinearSegmentedColormap.from_list(
-    'concurrence_cmap', ['darkblue', 'blue', 'purple', 'red'], N=256
-)

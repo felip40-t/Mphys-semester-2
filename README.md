@@ -34,7 +34,7 @@ This work probes entanglement in high-energy physics systems and tests Bell-type
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install numpy scipy matplotlib pylhe
+pip install -r requirements.txt
 ```
 
 Always activate the virtual environment before running any scripts:
@@ -65,7 +65,7 @@ make parse         # Parse LHE files; write per-event kinematics to outputs/data
 make analyse       # Bin events, extract coefficients, compute Bell/concurrence, save plots
 ```
 
-Process-specific targets:
+Process-specific targets run only one process:
 
 ```bash
 make events-zz     make events-ww
@@ -73,35 +73,54 @@ make parse-zz      make parse-ww
 make analyse-zz    make analyse-ww
 ```
 
-Optional overrides:
+### Makefile modifier targets and variable overrides
+
+The Makefile accepts **modifier words** appended to the target name and **variable overrides** set as `KEY=VALUE`. These can be combined freely.
+
+#### Modifier words
+
+| Modifier | Applies to | Effect |
+|---|---|---|
+| `whole-phase-space` | `events-*`, `parse-*` | Generates or parses a single uncut whole-phase-space run instead of per-bin runs |
+| `append` | `parse-*` | Concatenates onto existing `.npy` files instead of overwriting; only valid with `whole-phase-space` |
+| `raw` | `analyse-*` | Skips PSD projection of the density matrix |
+| `plot-only` | `analyse-*` | Skips the analysis computation and replots from already-saved grids |
+
+#### Variable overrides
+
+| Variable | Applies to | Effect |
+|---|---|---|
+| `NEVENTS=N` | `events-*` | Number of events to generate per run |
+| `OUTPUT_DIR=path` | `parse-*` | Directory where `.npy` files are written (overrides the default from `config.py`) |
+
+#### Examples
 
 ```bash
-make events NEVENTS=125000
-make events NEVENTS=1000000 WHOLE_PHASE_SPACE=1   # Single uncut run instead of per-bin runs
+# Generate 50,000 events per bin for ZZ
+make events-zz NEVENTS=50000
+
+# Generate a single whole-phase-space run with 500,000 events
+make events-zz whole-phase-space NEVENTS=500000
+
+# Parse a whole-phase-space run into the validation directory
+make parse-zz whole-phase-space OUTPUT_DIR=outputs/data/raw/ZZ/tests
+
+# Append a new whole-phase-space parse onto existing output
+make parse-zz whole-phase-space append OUTPUT_DIR=outputs/data/raw/ZZ/tests
+
+# Analyse without PSD projection
+make analyse-zz raw
+
+# Replot from saved grids without rerunning the analysis
+make analyse-zz plot-only
+
+# Combine raw and plot-only
+make analyse-zz raw plot-only
 ```
 
-### Parsing options
+### Parsing options (direct script invocation)
 
-The parser (`src/diboson/io/parse_lhe.py`) processes MadGraph `run_01`, `run_02`, ... sub-directories sequentially and concatenates all events into a single set of `.npy` files. Several flags control which runs are included and whether existing output is overwritten or extended.
-
-Pass flags to `make parse` via `PARSE_FLAGS`:
-
-```bash
-# Parse all runs (default — overwrites existing output)
-make parse-zz
-
-# Parse from run 5 onwards
-make parse-zz PARSE_FLAGS="--run-start 5"
-
-# Parse a specific range of runs
-make parse-zz PARSE_FLAGS="--run-start 3 --run-end 8"
-
-# Append new runs onto existing output (does not overwrite existing .npy files)
-make parse-zz PARSE_FLAGS="--run-start 11 --append"
-
-# Parse from a non-default events directory (e.g. a test run)
-make parse-zz PARSE_FLAGS="--events-dir /path/to/Events --output-dir outputs/data/raw/ZZ/tests"
-```
+When running `parse_lhe.py` directly (outside of `make`), additional flags are available that the Makefile does not expose, notably `--run-start` and `--run-end` for incremental parsing of specific run ranges.
 
 Full list of `parse_lhe.py` CLI flags:
 
@@ -110,7 +129,8 @@ Full list of `parse_lhe.py` CLI flags:
 | `--process ZZ\|WW` | required | Diboson process |
 | `--run-start N` | 1 | First run index to include (inclusive) |
 | `--run-end N` | all | Last run index to include (inclusive) |
-| `--append` | off | Concatenate onto existing `.npy` files instead of overwriting |
+| `--append` | off | Concatenate onto existing `.npy` files instead of overwriting; only valid with `--whole-phase-space` |
+| `--whole-phase-space` | off | Write all events to a single flat directory instead of per-region subdirectories; use for validation runs |
 | `--events-dir PATH` | from config | Directory containing `run_NN` sub-directories |
 | `--output-dir PATH` | from config | Directory where `.npy` files are written |
 | `--batch-size N` | 100,000 | Events held in memory before each disk flush |
@@ -118,11 +138,14 @@ Full list of `parse_lhe.py` CLI flags:
 **Typical incremental workflow** — if new runs were generated after a previous parse:
 
 ```bash
-# First parse: runs 1–10, results written to outputs/data/raw/ZZ/
-make parse-zz PARSE_FLAGS="--run-end 10"
+source .venv/bin/activate
+export PYTHONPATH=src
+
+# First parse: runs 1–10
+python src/diboson/io/parse_lhe.py --process ZZ --run-end 10
 
 # Later: runs 11–20 available; append without re-processing runs 1–10
-make parse-zz PARSE_FLAGS="--run-start 11 --append"
+python src/diboson/io/parse_lhe.py --process ZZ --run-start 11 --append
 ```
 
 ### Running scripts directly
@@ -132,10 +155,16 @@ make parse-zz PARSE_FLAGS="--run-start 11 --append"
 source .venv/bin/activate
 export PYTHONPATH=src
 
-python src/diboson/event_gen/automate.py --process ZZ   # event generation
-python src/diboson/io/parse_lhe.py --process ZZ         # LHE parsing
-python src/diboson/main.py --process ZZ                 # full analysis + plots
-python src/diboson/main.py --process ZZ --raw           # skip PSD projection
+python src/diboson/event_gen/automate.py --process ZZ                  # event generation
+python src/diboson/event_gen/automate.py --process ZZ --nevents 50000  # with event count
+python src/diboson/event_gen/automate.py --process ZZ --whole-phase-space  # single uncut run
+
+python src/diboson/io/parse_lhe.py --process ZZ           # LHE parsing (binned)
+python src/diboson/io/parse_lhe.py --process ZZ --whole-phase-space --output-dir outputs/data/raw/ZZ/tests
+
+python src/diboson/main.py --process ZZ                   # full analysis + plots
+python src/diboson/main.py --process ZZ --raw             # skip PSD projection
+python src/diboson/main.py --process ZZ --plot-only       # replot from saved grids
 ```
 
 ### Output layout
@@ -143,7 +172,7 @@ python src/diboson/main.py --process ZZ --raw           # skip PSD projection
 ```
 outputs/
 ├── data/raw/ZZ|WW/        # per-bin .npy files from parse_lhe
-├── data/processed/ZZ|WW/  # coefficient CSVs, Bell/concurrence grids
+├── data/processed/ZZ|WW/  # coefficient CSVs; Bell, uncertainty, concurrence, unphysicality, and optimal-params grids
 └── plots/ZZ|WW/           # PDF/PNG figures
 ```
 
@@ -156,8 +185,15 @@ All directories are created automatically when `src/diboson/config.py` is import
 After generating events with `WHOLE_PHASE_SPACE=1` and parsing them to `outputs/data/raw/ZZ/tests/`, run the validation script to check that the event generation settings and kinematics calculations are correct:
 
 ```bash
-make events-zz WHOLE_PHASE_SPACE=1
-python src/diboson/io/parse_lhe.py --process ZZ --output-dir outputs/data/raw/ZZ/tests
+# Step 1: generate a single uncut whole-phase-space run
+make events-zz whole-phase-space
+
+# Step 2: parse into the validation directory
+make parse-zz whole-phase-space OUTPUT_DIR=outputs/data/raw/ZZ/tests
+
+# Step 3: run validation
+source .venv/bin/activate
+export PYTHONPATH=src
 python src/diboson/analysis/validate.py
 ```
 
@@ -225,9 +261,18 @@ Extracts density matrix coefficients from lepton angular distributions.
 - Both include variance propagation via the full per-event covariance matrix
 
 #### `bell_optimiser.py`
-Maximises the CGLMP Bell inequality expectation value over all local unitary rotations.
+Maximises the CGLMP Bell inequality expectation value over all local unitary rotations U, V ∈ U(3).
 
-- `bell_inequality_optimization(rho, O_bell_prime)` — global optimisation over 12 Euler angle parameters using `scipy.differential_evolution` with parallel workers
+**Tensor factorisation.** The 9×9 density matrix ρ and Bell operator O'_B are each reshaped to rank-4 tensors of shape `(3, 3, 3, 3)` before any computation. A composite 9-dimensional index I encodes two qutrit states as `I = 3a + b`, so the reshape decomposes each row/column index into individual single-particle indices `(a, b)`. The expectation value then reduces to a pure index contraction over eight 3-valued indices:
+
+$$\mathcal{I}_3 = \sum_{a,b,c,d,\,i,j,k,l}\, \rho_{ab,cd}\; U^*_{ic}\; V^*_{jd}\; [\mathcal{O}'_B]_{ij,kl}\; U_{ka}\; V_{lb}$$
+
+This avoids constructing the full 9×9 Kronecker product U⊗V at any point. The optimal contraction order is derived once per call via `numpy.einsum_path` and reused on every function evaluation.
+
+**Optimisation.** The 12 free parameters — three Euler angles and three phases per unitary (see `unitary_matrix.py`) — are optimised with multistart L-BFGS-B. Forty random starting points are drawn uniformly from [0, 2π]¹² and each run to convergence independently; the global maximum across all starts is returned. Starts are dispatched in parallel via `ThreadPoolExecutor`.
+
+- `bell_inequality_optimization(rho, O_bell_prime)` — returns `(best_value, best_params)`
+- `optimal_bell_operator(O_bell_prime, params)` — reconstructs the rotated Bell operator from stored parameters
 
 #### `kinematics.py`
 All functions operate on batched `(N, 4)` arrays ordered `(E, px, py, pz)`.
@@ -349,9 +394,11 @@ A non-zero value certifies entanglement.
 
 $$\mathcal{I}_3 = \langle\mathcal{O}_B\rangle = \mathrm{Tr}\{\rho\,\mathcal{O}_B\} \leq 2$$
 
-The Bell operator is optimised over unitary rotations U, V ∈ U(3) to maximise violation. Its initial form is:
+The observable is maximised over local unitary rotations U, V ∈ U(3), giving the optimised value Tr{ρ (U⊗V)† O'_B (U⊗V)}. The base operator is:
 
 $$\mathcal{O}'_B = -\frac{2}{\sqrt{3}}\left(S_x\otimes S_x + S_y\otimes S_y\right) + \lambda_4\otimes\lambda_4 + \lambda_5\otimes\lambda_5$$
+
+Each unitary is parameterised by 12 real angles (PMNS/CKM-style: three mixing angles and three phases per factor). The bipartite Hilbert space structure — two qutrits sharing a 9-dimensional composite space — means ρ and O'_B can be treated as rank-4 tensors of shape (3,3,3,3), with each 9-dimensional index factoring as I = 3a + b. This tensor form allows the expectation value to be evaluated without constructing any 9×9 Kronecker products (see `bell_optimiser.py`).
 
 ### Phase Space
 

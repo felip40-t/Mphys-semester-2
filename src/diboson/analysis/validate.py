@@ -28,14 +28,6 @@ validate_dict = {
 
 NUM_BINS = 50
 
-# Read angular distribution data for ZZ (whole-phase-space validation run)
-_data_dir = ZZ_RAW_DIR / "tests"
-theta_1 = np.load(_data_dir / "theta1.npy")
-theta_3 = np.load(_data_dir / "theta3.npy")
-cos_theta_1 = np.cos(theta_1)
-cos_theta_3 = np.cos(theta_3)
-phi_1 = np.load(_data_dir / "phi1.npy")
-phi_3 = np.load(_data_dir / "phi3.npy")
 
 _LABEL_CONFIG = {
     'cos_theta': {
@@ -111,6 +103,16 @@ def calc_coefficients(theta_1, theta_3, phi_1, phi_3):
 
 
 if __name__ == "__main__":
+    
+    # Read angular distribution data for ZZ (whole-phase-space validation run)
+    _data_dir = ZZ_RAW_DIR / "tests"
+    theta_1 = np.load(_data_dir / "theta1.npy")
+    theta_3 = np.load(_data_dir / "theta3.npy")
+    cos_theta_1 = np.cos(theta_1)
+    cos_theta_3 = np.cos(theta_3)
+    phi_1 = np.load(_data_dir / "phi1.npy")
+    phi_3 = np.load(_data_dir / "phi3.npy")
+
     plot_histogram(cos_theta_1, cos_theta_3, 'cos_theta')
     plot_histogram(phi_1, phi_3, 'phi')
 

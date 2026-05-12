@@ -9,28 +9,30 @@ from diboson.plotting.style import (
     FONTSIZE_LABEL,
     FONTSIZE_TICK,
     FONTSIZE_ANNOTATION,
-    CONCURRENCE_CMAP,
 )
+from diboson.analysis.region_analysis import ProcessSpec
 
 
-def plot_contour_heatmap(save_dir, cos_psi_grid, inv_mass_grid, bell_value_grid, label, process_label, concurrence=False):
+def plot_contour_heatmap(save_dir, spec, bell_value_grid, label, concurrence=False):
     """
     Plots contour and heatmap of the Bell operator values or Concurrence values.
 
     Parameters:
         save_dir (str): Directory where plots will be saved.
-        cos_psi_grid (ndarray): 2D mesh grid of cos(theta) centers.
-        inv_mass_grid (ndarray): 2D mesh grid of M_VV centers.
-        bell_value_grid (ndarray): 2D array of Bell operator values or concurrence values.
+        spec (ProcessSpec): Process specification providing grid geometry.
+        bell_value_grid (ndarray): 2D array of shape (n_cos, n_mass) — the natural
+            storage convention used by main.py.
         label (str): Label appended to the output filenames.
-        process_label (str): Process tag used in filenames and the y-axis label, e.g. "ZZ" or "WW".
         concurrence (bool): If True, indicates that the values are concurrence values.
     """
+    bell_value_grid = bell_value_grid.T  # (n_cos, n_mass) -> (n_mass, n_cos) for meshgrid alignment
+    cos_psi_grid, inv_mass_grid = spec.grid_centers()
+
     bell_grid_smoothed = gaussian_filter(bell_value_grid, sigma=1.0)
     plt.figure(figsize=FIGSIZE_HEATMAP)
     custom_levels = np.arange(np.round(np.min(bell_grid_smoothed), 1) - 0.1, np.round(np.max(bell_grid_smoothed), 1) + 0.2, step=0.1)
     contour_filled = plt.contourf(cos_psi_grid, inv_mass_grid, bell_grid_smoothed,
-                                  levels=custom_levels, cmap=CONCURRENCE_CMAP if concurrence else 'plasma')
+                                  levels=custom_levels, cmap='plasma')
     contour_lines = plt.contour(cos_psi_grid, inv_mass_grid, bell_grid_smoothed,
                                 levels=custom_levels, colors='black', linewidths=0.7)
     plt.clabel(contour_lines, inline=True, fontsize=FONTSIZE_ANNOTATION, fmt="%.2f")
@@ -40,14 +42,14 @@ def plot_contour_heatmap(save_dir, cos_psi_grid, inv_mass_grid, bell_value_grid,
         colorbar = plt.colorbar(contour_filled, label=r'$\mathcal{I}_3$', orientation='vertical')
     colorbar.ax.yaxis.label.set_fontsize(FONTSIZE_LABEL)
     plt.xlabel(r'$\cos{\Theta}$', fontsize=FONTSIZE_LABEL)
-    plt.ylabel(rf'$M_{{{process_label}}} (GeV)$', fontsize=FONTSIZE_LABEL)
-    plt.yticks(np.arange(300, 1200, 100), fontsize=FONTSIZE_TICK)
-    plt.xticks(np.arange(0.1, 0.9, 0.1), fontsize=FONTSIZE_TICK)
+    plt.ylabel(rf'$M_{{{spec.name}}} (GeV)$', fontsize=FONTSIZE_LABEL)
+    plt.yticks(np.arange(spec.mass_min + spec.mass_width, spec.mass_max, spec.mass_width), fontsize=FONTSIZE_TICK)
+    plt.xticks(np.arange(spec.cos_min + spec.cos_width, spec.cos_max, spec.cos_width), fontsize=FONTSIZE_TICK)
     plt.tight_layout()
     if concurrence:
-        name = f"concurrence_contour_{process_label}_{label}.pdf"
+        name = f"concurrence_contour_{spec.name}_{label}.pdf"
     else:
-        name = f"bell_operator_contour_{process_label}_{label}.pdf"
+        name = f"bell_operator_contour_{spec.name}_{label}.pdf"
     plot_filename = os.path.join(save_dir, name)
     plt.savefig(plot_filename)
     plot_filename = os.path.join(save_dir, name.replace('.pdf', '.png'))
@@ -55,21 +57,21 @@ def plot_contour_heatmap(save_dir, cos_psi_grid, inv_mass_grid, bell_value_grid,
     plt.close()
 
     plt.figure(figsize=FIGSIZE_HEATMAP)
-    plt.imshow(bell_value_grid, origin='lower', extent=[0, 0.9, 200, 1200],
-               aspect='auto', cmap=CONCURRENCE_CMAP if concurrence else 'plasma')
+    plt.imshow(bell_value_grid, origin='lower',
+               extent=[spec.cos_min, spec.cos_max, spec.mass_min, spec.mass_max],
+               aspect='auto', cmap='plasma')
     if concurrence:
         colorbar = plt.colorbar(label=r'$\mathcal{C}_{LB}$', orientation='vertical')
     else:
         colorbar = plt.colorbar(label=r'$\mathcal{I}_3$', orientation='vertical')
     colorbar.ax.yaxis.label.set_fontsize(FONTSIZE_LABEL)
     plt.xlabel(r'$\cos{\Theta}$', fontsize=FONTSIZE_LABEL)
-    plt.ylabel(rf'$M_{{{process_label}}} (GeV)$', fontsize=FONTSIZE_LABEL)
-    plt.yticks(np.arange(200, 1201, 100), fontsize=FONTSIZE_TICK)
-    plt.xticks(np.arange(0.0, 1.0, 0.1), fontsize=FONTSIZE_TICK)
+    plt.ylabel(rf'$M_{{{spec.name}}} (GeV)$', fontsize=FONTSIZE_LABEL)
+    plt.yticks(np.arange(spec.mass_min, spec.mass_max + 1, spec.mass_width), fontsize=FONTSIZE_TICK)
+    plt.xticks(np.arange(spec.cos_min, spec.cos_max + 0.001, spec.cos_width), fontsize=FONTSIZE_TICK)
 
-    num_rows, num_cols = bell_value_grid.shape
-    x_centers = np.linspace(0.05, 0.85, num_cols)
-    y_centers = np.linspace(225.0, 1175.0, num_rows)
+    x_centers = cos_psi_grid[0, :]
+    y_centers = inv_mass_grid[:, 0]
     for i, y in enumerate(y_centers):
         for j, x in enumerate(x_centers):
             plt.text(x, y, f"{bell_value_grid[i, j]:.2f}", color="white",
@@ -77,12 +79,62 @@ def plot_contour_heatmap(save_dir, cos_psi_grid, inv_mass_grid, bell_value_grid,
     plt.tight_layout()
 
     if concurrence:
-        name = f"concurrence_heatmap_{process_label}_{label}.pdf"
+        name = f"concurrence_heatmap_{spec.name}_{label}.pdf"
     else:
-        name = f"bell_operator_heatmap_{process_label}_{label}.pdf"
+        name = f"bell_operator_heatmap_{spec.name}_{label}.pdf"
 
     heatmap_filename = os.path.join(save_dir, name)
     plt.savefig(heatmap_filename)
     heatmap_filename = os.path.join(save_dir, name.replace('.pdf', '.png'))
     plt.savefig(heatmap_filename)
     plt.close()
+
+def generate_unphysicality_heatmap(spec, raw_dir, save_dir, regions, data=None):
+    cos_psi_grid, inv_mass_grid = spec.grid_centers()
+    x_centers = cos_psi_grid[0, :]
+    y_centers = inv_mass_grid[:, 0]
+
+    if data is None:
+        unphysicality_grid = np.zeros((spec.n_cos_bins, spec.n_mass_bins))
+
+        for (i, j), region in regions.items():
+            print(f"Calculating unphysicality for region: {region}...")
+            region_dir = _region_dir(raw_dir, region)
+
+            if os.path.exists(region_dir):
+                theta_paths, phi_paths = _theta_phi_paths(spec, region_dir)
+                density_matrix = spec.get_density_matrix(theta_paths, phi_paths)
+                unphysicality = unphysicality_score(density_matrix)
+                print(f"\nUnphysicality score for region: {region} = {unphysicality:.4g}\n")
+                unphysicality_grid[i, j] = unphysicality
+            else:
+                print(f"Directory {region_dir} not found. Skipping region.")
+
+        np.save(os.path.join(save_dir, f"unphysicality_scores_{spec.name}.npy"), unphysicality_grid)
+    else:
+        unphysicality_grid = data
+
+    unphysicality_grid = unphysicality_grid.T  # (n_cos, n_mass) -> (n_mass, n_cos) for meshgrid alignment
+
+    plt.figure(figsize=FIGSIZE_HEATMAP)
+    plt.imshow(unphysicality_grid, origin='lower', 
+                extent=[spec.cos_min, spec.cos_max, spec.mass_min, spec.mass_max],
+                aspect='auto', cmap='plasma')
+    colorbar = plt.colorbar(label='Unphysicality', orientation='vertical')
+    colorbar.ax.yaxis.label.set_fontsize(FONTSIZE_LABEL)
+    plt.xlabel(r'$\cos{\Theta}$', fontsize=FONTSIZE_LABEL)
+    plt.ylabel(rf'$M_{{{spec.name}}} (GeV)$', fontsize=FONTSIZE_LABEL)
+    plt.yticks(y_centers, fontsize=FONTSIZE_TICK)
+    plt.xticks(x_centers, fontsize=FONTSIZE_TICK)
+
+    for i, y in enumerate(y_centers):
+        for j, x in enumerate(x_centers):
+            plt.text(x, y, f"{unphysicality_grid[i, j]:.2f}", color="white",
+                     ha="center", va="center", fontsize=FONTSIZE_ANNOTATION)
+
+    base = os.path.join(save_dir, f"unphysicality_heatmap_{spec.name}")
+    plt.savefig(base + ".pdf")
+    plt.savefig(base + ".png")
+    plt.close()
+
+    return unphysicality_grid

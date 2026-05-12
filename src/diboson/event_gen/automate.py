@@ -2,20 +2,12 @@ import re
 import subprocess
 import argparse
 
-from diboson.config import ZZ_PROCESS_DIR, WW_PROCESS_DIR, N_COS_BINS, ZZ_N_MASS_BINS, WW_N_MASS_BINS, MASS_BIN_MIN, COS_BIN_MIN, COM_ENERGY, NEVENTS as _DEFAULT_NEVENTS
+from diboson.config import ZZ_PROCESS_DIR, WW_PROCESS_DIR, COM_ENERGY, NEVENTS as _DEFAULT_NEVENTS
+from diboson.main import _PROCESS_CONFIGS
+from diboson.analysis.region_analysis import ProcessSpec
 
-
-def _build_regions(n_cos, n_mass):
-    return [
-        [(COS_BIN_MIN + 0.1 * i, COS_BIN_MIN + 0.1 * i + 0.1), (MASS_BIN_MIN + 50.0 * j, MASS_BIN_MIN + 50.0 * j + 50.0)]
-        for i in range(n_cos)
-        for j in range(n_mass)
-    ]
-
-
-ZZ_REGIONS = _build_regions(N_COS_BINS, ZZ_N_MASS_BINS)
-
-WW_REGIONS = _build_regions(N_COS_BINS, WW_N_MASS_BINS)
+ZZ_REGIONS = _PROCESS_CONFIGS["ZZ"][0].build_regions()
+WW_REGIONS = _PROCESS_CONFIGS["WW"][0].build_regions()
 
 PROCESS_CONFIGS = {
     "ZZ": (ZZ_PROCESS_DIR, ZZ_REGIONS),
@@ -38,7 +30,7 @@ c
 c     Local variables for phase-space cuts
 c
       real*8 PV1(0:3), PV2(0:3), PVV(0:3), V1b(0:3)
-      real*8 M_squared, cos_psi, rmboost, aux, aaux
+      real*8 inv_mass, cos_psi, e1_cm, boost_coeff
 
 c     Reconstruct boson 4-momenta: V1 from particles 3+4, V2 from 5+6
       PV1(0) = P(0,3) + P(0,4)
@@ -54,24 +46,24 @@ c     Reconstruct boson 4-momenta: V1 from particles 3+4, V2 from 5+6
       PVV(2) = PV1(2) + PV2(2)
       PVV(3) = PV1(3) + PV2(3)
 
-c     Invariant mass of VV system (GeV) -- also used as boost denominator
-      rmboost = dsqrt(max(PVV(0)**2 - PVV(1)**2 - PVV(2)**2
+c     Invariant mass of VV system (GeV)
+      inv_mass = dsqrt(max(PVV(0)**2 - PVV(1)**2 - PVV(2)**2
      &               - PVV(3)**2, 0.0d0))
-      M_squared = rmboost
 
-c     Boost V1 into VV centre-of-mass frame (boostinvp algorithm)
-      aux = (PV1(0)*PVV(0) - PV1(1)*PVV(1) - PV1(2)*PVV(2)
-     &       - PV1(3)*PVV(3)) / rmboost
-      aaux = (aux + PV1(0)) / (PVV(0) + rmboost)
-      V1b(0) = aux
-      V1b(1) = PV1(1) - aaux * PVV(1)
-      V1b(2) = PV1(2) - aaux * PVV(2)
-      V1b(3) = PV1(3) - aaux * PVV(3)
+c     Boost V1 into VV centre-of-mass frame
+c     Calculate energy of V1 in CM frame
+      e1_cm = (PV1(0)*PVV(0) - PV1(1)*PVV(1) - PV1(2)*PVV(2)
+     &       - PV1(3)*PVV(3)) / inv_mass
+      boost_coeff = (e1_cm + PV1(0)) / (PVV(0) + inv_mass)
+      V1b(0) = e1_cm
+      V1b(1) = PV1(1) - boost_coeff * PVV(1)
+      V1b(2) = PV1(2) - boost_coeff * PVV(2)
+      V1b(3) = PV1(3) - boost_coeff * PVV(3)
 
 c     cos(scattering angle) of V1 with beam (z) axis
       cos_psi = V1b(3) / dsqrt(V1b(1)**2 + V1b(2)**2 + V1b(3)**2)
 
-      if (M_squared.gt.(0.0d0) .and. M_squared.lt.(9999.0d0) .and.
+      if (inv_mass.gt.(0.0d0) .and. inv_mass.lt.(9999.0d0) .and.
      &   cos_psi.lt.(1.0d0) .and. cos_psi.gt.(-1.0d0)) then
           dummy_cuts = .true.
       else
@@ -116,11 +108,11 @@ def modify_fortran_file(file_path, limits):
         content = f.read()
 
     pattern = (
-        r"^\s+if \(M_squared\.gt\.\([^)]*\) \.and\. M_squared\.lt\.\([^)]*\) .and.\n"
+        r"^\s+if \(inv_mass\.gt\.\([^)]*\) \.and\. inv_mass\.lt\.\([^)]*\) .and.\n"
         r"\s+&\s*cos_psi\.lt\.\([^)]*\) \.and\. cos_psi\.gt\.\([^)]*\)\) then"
     )
     replacement = (
-        f"      if (M_squared.gt.({limits[1][0]}d0) .and. M_squared.lt.({limits[1][1]}d0) .and.\n"
+        f"      if (inv_mass.gt.({limits[1][0]}d0) .and. inv_mass.lt.({limits[1][1]}d0) .and.\n"
         f"     &   cos_psi.lt.({limits[0][1]}d0) .and. cos_psi.gt.({limits[0][0]}d0)) then"
     )
 

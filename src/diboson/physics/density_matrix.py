@@ -123,4 +123,4 @@ def unphysicality_score(density_matrix):
         if eigenvalues[i] < 0:
             score += abs(eigenvalues[i])
 
-    return score / np.max(eigenvalues)
+    return score

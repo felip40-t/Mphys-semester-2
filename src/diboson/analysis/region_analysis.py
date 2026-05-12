@@ -15,7 +15,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from diboson.plotting.style import FIGSIZE_HEATMAP, FONTSIZE_LABEL, FONTSIZE_TICK, FONTSIZE_ANNOTATION
-from diboson.config import COS_BIN_MIN, COS_BIN_WIDTH, MASS_BIN_MIN, MASS_BIN_WIDTH
 from diboson.physics.density_matrix import (
     O_bell_prime1,
     project_to_psd,
@@ -33,7 +32,12 @@ class ProcessSpec:
     name: str
     n_mass_bins: int
     n_cos_bins: int
+    mass_width: float
+    cos_width: float
     mass_max: float
+    cos_max: float
+    mass_min: float
+    cos_min: float
     eta: float
     psi_filename: str
     inv_mass_filename: str
@@ -46,8 +50,8 @@ class ProcessSpec:
         """Return the canonical {(i,j): [cos_range, mass_range]} dict for this process."""
         return {
             (i, j): [
-                (COS_BIN_MIN + COS_BIN_WIDTH * i, COS_BIN_MIN + COS_BIN_WIDTH * (i + 1)),
-                (MASS_BIN_MIN + MASS_BIN_WIDTH * j, MASS_BIN_MIN + MASS_BIN_WIDTH * (j + 1)),
+                (self.cos_min + self.cos_width * i, self.cos_min + self.cos_width * (i + 1)),
+                (self.mass_min + self.mass_width * j, self.mass_min + self.mass_width * (j + 1)),
             ]
             for i in range(self.n_cos_bins)
             for j in range(self.n_mass_bins)
@@ -56,14 +60,14 @@ class ProcessSpec:
     def grid_centers(self):
         """Return (cos_psi_grid, inv_mass_grid) meshgrids of bin centres."""
         cos_centers = np.arange(
-            COS_BIN_MIN + COS_BIN_WIDTH / 2,
-            COS_BIN_MIN + self.n_cos_bins * COS_BIN_WIDTH,
-            COS_BIN_WIDTH,
+            self.cos_min + self.cos_width / 2,
+            self.cos_max,
+            self.cos_width,
         )
         mass_centers = np.arange(
-            MASS_BIN_MIN + MASS_BIN_WIDTH / 2,
-            MASS_BIN_MIN + self.n_mass_bins * MASS_BIN_WIDTH + MASS_BIN_WIDTH / 2,
-            MASS_BIN_WIDTH,
+            self.mass_min + self.mass_width / 2,
+            self.mass_max,
+            self.mass_width,
         )
         return np.meshgrid(cos_centers, mass_centers)
 
@@ -141,11 +145,11 @@ def process_region(
     }
 
 
-def generate_event_count_heatmap(spec, raw_dir, save_dir, regions, num_x_bins=180, num_y_bins=200):
+def generate_event_count_heatmap(spec, raw_dir, save_dir, regions, num_x_bins=100, num_y_bins=100):
     event_count_grid = np.zeros((num_y_bins, num_x_bins))
 
-    cos_psi_edges = np.linspace(0, 0.9, num_x_bins + 1)
-    inv_mass_edges = np.linspace(200, 1200, num_y_bins + 1)
+    cos_psi_edges = np.linspace(spec.cos_min, spec.cos_max, num_x_bins + 1)
+    inv_mass_edges = np.linspace(spec.mass_min, spec.mass_max, num_y_bins + 1)
 
     for key, region in regions.items():
         print("Calculating event count for region:", region)
@@ -156,8 +160,8 @@ def generate_event_count_heatmap(spec, raw_dir, save_dir, regions, num_x_bins=18
             cos_psi_path = os.path.join(region_dir, spec.psi_filename)
             inv_mass_path = os.path.join(region_dir, spec.inv_mass_filename)
 
-            cos_psi_data = np.loadtxt(cos_psi_path)
-            inv_mass_data = np.loadtxt(inv_mass_path)
+            cos_psi_data = np.load(cos_psi_path)
+            inv_mass_data = np.load(inv_mass_path)
 
             hist2d, _, _ = np.histogram2d(
                 inv_mass_data, cos_psi_data, bins=[inv_mass_edges, cos_psi_edges]
@@ -165,7 +169,7 @@ def generate_event_count_heatmap(spec, raw_dir, save_dir, regions, num_x_bins=18
             event_count_grid += hist2d
 
     plt.figure(figsize=FIGSIZE_HEATMAP)
-    plt.imshow(event_count_grid, origin='lower', extent=[0, 0.9, 200, 1200],
+    plt.imshow(event_count_grid, origin='lower', extent=[spec.cos_min, spec.cos_max, spec.mass_min, spec.mass_max],
                aspect='auto', cmap='inferno', vmin=0, vmax=2500)
     colorbar = plt.colorbar(label=r'Event Count', orientation='vertical')
     colorbar.ax.yaxis.label.set_fontsize(FONTSIZE_LABEL)
@@ -181,7 +185,8 @@ def generate_event_count_heatmap(spec, raw_dir, save_dir, regions, num_x_bins=18
 
 
 def generate_uniformity_heatmap(spec, raw_dir, save_dir, regions):
-    uniformity_grid = np.zeros((9, 20))
+    uniformity_grid = np.zeros((spec.n_cos_bins, spec.n_mass_bins))
+    grid_centers = spec.grid_centers()
 
     for (i, j), region in regions.items():
         print(f"Calculating uniformity for region: {region}...")
@@ -191,8 +196,8 @@ def generate_uniformity_heatmap(spec, raw_dir, save_dir, regions):
             cos_psi_path = os.path.join(region_dir, spec.psi_filename)
             inv_mass_path = os.path.join(region_dir, spec.inv_mass_filename)
 
-            cos_psi_data = np.loadtxt(cos_psi_path)
-            inv_mass_data = np.loadtxt(inv_mass_path)
+            cos_psi_data = np.load(cos_psi_path)
+            inv_mass_data = np.load(inv_mass_path)
 
             h, _, _ = np.histogram2d(inv_mass_data, cos_psi_data, bins=[10, 10])
             mean = np.mean(h)
@@ -205,18 +210,19 @@ def generate_uniformity_heatmap(spec, raw_dir, save_dir, regions):
     np.save(os.path.join(save_dir, "uniformity_scores.npy"), uniformity_grid)
 
     plt.figure(figsize=FIGSIZE_HEATMAP)
-    plt.imshow(uniformity_grid, origin='lower', extent=[0, 0.9, 200, 1200],
-               aspect='auto', cmap='plasma_r', vmin=0.7, vmax=1)
+    plt.imshow(uniformity_grid, origin='lower', 
+                extent=[spec.cos_min, spec.cos_max, spec.mass_min, spec.mass_max],
+                aspect='auto', cmap='plasma_r', vmin=0.7, vmax=1)
     colorbar = plt.colorbar(label='Uniformity Score', orientation='vertical')
     colorbar.ax.yaxis.label.set_fontsize(FONTSIZE_LABEL)
     plt.xlabel(r'$\cos{\Theta}$', fontsize=FONTSIZE_LABEL)
     plt.ylabel(rf'$M_{{{spec.name}}} (GeV)$', fontsize=FONTSIZE_LABEL)
-    plt.yticks(np.arange(200, 1201, 100), fontsize=FONTSIZE_TICK)
-    plt.xticks(np.arange(0.0, 1.0, 0.1), fontsize=FONTSIZE_TICK)
+    plt.yticks(grid_centers[1], fontsize=FONTSIZE_TICK)
+    plt.xticks(grid_centers[0], fontsize=FONTSIZE_TICK)
 
     num_rows, num_cols = uniformity_grid.shape
-    x_centers = np.linspace(0.05, 0.85, num_cols)
-    y_centers = np.linspace(225.0, 1175.0, num_rows)
+    x_centers = grid_centers[0]
+    y_centers = grid_centers[1]
     for i, y in enumerate(y_centers):
         for j, x in enumerate(x_centers):
             plt.text(x, y, f"{uniformity_grid[i, j]:.2f}", color="white",
@@ -230,49 +236,4 @@ def generate_uniformity_heatmap(spec, raw_dir, save_dir, regions):
     return uniformity_grid
 
 
-def generate_unphysicality_heatmap(spec, raw_dir, save_dir, regions, data=None):
-    if data is None:
-        unphysicality_grid = np.zeros((9, spec.n_mass_bins))
 
-        for (i, j), region in regions.items():
-            print(f"Calculating unphysicality for region: {region}...")
-            region_dir = _region_dir(raw_dir, region)
-
-            if os.path.exists(region_dir):
-                theta_paths, phi_paths = _theta_phi_paths(spec, region_dir)
-                density_matrix = spec.get_density_matrix(theta_paths, phi_paths)
-                unphysicality = unphysicality_score(density_matrix)
-                print(f"\nUnphysicality score for region: {region} = {unphysicality:.4g}\n")
-                unphysicality_grid[i, j] = unphysicality
-            else:
-                print(f"Directory {region_dir} not found. Skipping region.")
-
-        unphysicality_grid = unphysicality_grid.T
-        np.save(os.path.join(save_dir, f"unphysicality_scores_{spec.name}.npy"), unphysicality_grid)
-    else:
-        unphysicality_grid = data
-
-    plt.figure(figsize=FIGSIZE_HEATMAP)
-    plt.imshow(unphysicality_grid, origin='lower', extent=[0, 0.9, 200, spec.mass_max],
-               aspect='auto', cmap='plasma')
-    colorbar = plt.colorbar(label='Unphysicality', orientation='vertical')
-    colorbar.ax.yaxis.label.set_fontsize(FONTSIZE_LABEL)
-    plt.xlabel(r'$\cos{\Theta}$', fontsize=FONTSIZE_LABEL)
-    plt.ylabel(rf'$M_{{{spec.name}}} (GeV)$', fontsize=FONTSIZE_LABEL)
-    plt.yticks(np.arange(200, int(spec.mass_max) + 1, 100), fontsize=FONTSIZE_TICK)
-    plt.xticks(np.arange(0.0, 1.0, 0.1), fontsize=FONTSIZE_TICK)
-
-    num_rows, num_cols = unphysicality_grid.shape
-    x_centers = np.linspace(0.05, 0.85, num_cols)
-    y_centers = np.linspace(225.0, spec.mass_max - 25.0, num_rows)
-    for i, y in enumerate(y_centers):
-        for j, x in enumerate(x_centers):
-            plt.text(x, y, f"{unphysicality_grid[i, j]:.2f}", color="white",
-                     ha="center", va="center", fontsize=FONTSIZE_ANNOTATION)
-
-    base = os.path.join(save_dir, f"unphysicality_heatmap_{spec.name}")
-    plt.savefig(base + ".pdf")
-    plt.savefig(base + ".png")
-    plt.close()
-
-    return unphysicality_grid
