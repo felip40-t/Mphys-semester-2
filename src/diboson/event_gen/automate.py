@@ -6,8 +6,8 @@ from diboson.config import ZZ_PROCESS_DIR, WW_PROCESS_DIR, COM_ENERGY, NEVENTS a
 from diboson.main import _PROCESS_CONFIGS
 from diboson.analysis.region_analysis import ProcessSpec
 
-ZZ_REGIONS = _PROCESS_CONFIGS["ZZ"][0].build_regions()
-WW_REGIONS = _PROCESS_CONFIGS["WW"][0].build_regions()
+ZZ_REGIONS = _PROCESS_CONFIGS["ZZ"]["spec"].build_regions()
+WW_REGIONS = _PROCESS_CONFIGS["WW"]["spec"].build_regions()
 
 PROCESS_CONFIGS = {
     "ZZ": (ZZ_PROCESS_DIR, ZZ_REGIONS),
@@ -108,7 +108,7 @@ def modify_fortran_file(file_path, limits):
         content = f.read()
 
     pattern = (
-        r"^\s+if \(inv_mass\.gt\.\([^)]*\) \.and\. inv_mass\.lt\.\([^)]*\) .and.\n"
+        r"^\s+if \(inv_mass\.gt\.\([^)]*\) \.and\. inv_mass\.lt\.\([^)]*\) \.and\.\n"
         r"\s+&\s*cos_psi\.lt\.\([^)]*\) \.and\. cos_psi\.gt\.\([^)]*\)\) then"
     )
     replacement = (
@@ -156,10 +156,16 @@ def configure_run_card(process_dir, nevents=None):
     print(f"Configured {run_card}: nevents={n}, ebeam1=ebeam2={beam_energy} GeV")
 
 
-def generate_events(process_name, whole_phase_space=False, nevents=None):
+def generate_events(process_name, whole_phase_space=False, nevents=None, start_region=None):
+    """
+    start_region: (cos_idx, mass_idx) — skip all regions that come before this
+    bin index pair in the natural (cos_idx, mass_idx) ordering. Ignored in
+    whole-phase-space mode.
+    """
     process_dir, regions = PROCESS_CONFIGS[process_name]
     configure_run_card(process_dir, nevents=nevents)
     fortran_dummy_fct = process_dir / "SubProcesses" / "dummy_fct.f"
+    reset_fortran_file(fortran_dummy_fct)  # ensure we start from a clean slate
 
     if whole_phase_space:
         reset_fortran_file(fortran_dummy_fct)
@@ -171,14 +177,18 @@ def generate_events(process_name, whole_phase_space=False, nevents=None):
         print("Whole-phase-space run finished")
     else:
         initialise_fortran_file(fortran_dummy_fct)
-        for region in regions:
-            modify_fortran_file(fortran_dummy_fct, region)
+        start = tuple(start_region) if start_region is not None else (0, 0)
+        for (i, j), limits in sorted(regions.items()):
+            if (i, j) < start:
+                print(f"Skipping region ({i},{j}) {limits} (before start {start})")
+                continue
+            modify_fortran_file(fortran_dummy_fct, limits)
             subprocess.run(
                 [process_dir / "bin" / "generate_events"],
                 input="0\n0\n", text=True,
                 cwd=process_dir, check=True,
             )
-            print(f"Region {region} finished")
+            print(f"Region ({i},{j}) {limits} finished")
 
 
 if __name__ == "__main__":
@@ -190,5 +200,17 @@ if __name__ == "__main__":
                              "(dummy_fct.f has no cuts body). Default: binned mode.")
     parser.add_argument("--nevents", type=int, default=None,
                         help=f"Number of events per run. Default: NEVENTS from config.py ({_DEFAULT_NEVENTS}).")
+    parser.add_argument("--start-region", nargs=2, type=int, metavar=("COS_IDX", "MASS_IDX"),
+                        default=None,
+                        help="Bin indices (cos_idx, mass_idx) at which to start generation, "
+                             "skipping all earlier bins. "
+                             "cos_idx = int((cos_lo - COS_BIN_MIN) / COS_BIN_WIDTH), "
+                             "mass_idx = int((mass_lo - MASS_BIN_MIN) / MASS_BIN_WIDTH). "
+                             "Example: --start-region 4 2 resumes from [(0.4,0.5),(300,350)].")
     args = parser.parse_args()
-    generate_events(args.process, whole_phase_space=args.whole_phase_space, nevents=args.nevents)
+    generate_events(
+        args.process,
+        whole_phase_space=args.whole_phase_space,
+        nevents=args.nevents,
+        start_region=args.start_region,
+    )

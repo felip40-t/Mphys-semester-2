@@ -21,7 +21,7 @@ The analysis pipeline:
 5. Compute:
    - Lower bound on concurrence
    - Bell operator expectation value (CGLMP inequality)
-6. Evaluate observables across phase space (M_VV, cosΘ)
+6. Evaluate observables across phase space ($M_{VV}$, cos$\Theta$)
 
 This work probes entanglement in high-energy physics systems and tests Bell-type inequalities in spin-1 (qutrit) systems.
 
@@ -92,6 +92,7 @@ The Makefile accepts **modifier words** appended to the target name and **variab
 |---|---|---|
 | `NEVENTS=N` | `events-*` | Number of events to generate per run |
 | `OUTPUT_DIR=path` | `parse-*` | Directory where `.npy` files are written (overrides the default from `config.py`) |
+| `START_REGION="COS_IDX MASS_IDX"` | `events-*` | Resume binned generation from a specific bin, skipping all earlier ones (see below) |
 
 #### Examples
 
@@ -116,7 +117,32 @@ make analyse-zz plot-only
 
 # Combine raw and plot-only
 make analyse-zz raw plot-only
+
+# Resume ZZ event generation from bin (cos_idx=4, mass_idx=2), i.e. cos∈[0.4,0.5], M∈[300,350] GeV
+make events-zz START_REGION="4 2"
 ```
+
+#### Resuming interrupted event generation with `START_REGION`
+
+Binned event generation runs one MadGraph job per phase-space bin (up to 160 bins for ZZ). If a run is interrupted, use `START_REGION` to pick up where it left off rather than regenerating all earlier bins.
+
+The two indices are:
+- `COS_IDX` — integer index of the cosΘ bin: `COS_IDX = int((cos_lo - 0.0) / 0.1)`
+- `MASS_IDX` — integer index of the invariant mass bin: `MASS_IDX = int((mass_lo - 200) / 50)`
+However, this specific example is for widths of 0.1 and 50 GeV and minimum values of 0.0 and 200 for the scattering angle and invariant mass of the bosons (respectively). 
+If the values defining your phase space are different then you would need to adjust this indexing convention.
+
+For example, bin `[cos∈(0.4, 0.5), M∈(300, 350) GeV]` has `COS_IDX=4, MASS_IDX=2`.
+
+```bash
+# Resume ZZ generation from cos∈[0.4,0.5], M∈[300,350] GeV onward
+make events-zz START_REGION="4 2"
+
+# Same but with a custom event count
+make events-zz START_REGION="4 2" NEVENTS=50000
+```
+
+All bins that come before `(COS_IDX, MASS_IDX)` in the natural `(i, j)` ordering are skipped with a printed message. The Fortran phase-space cut file is updated correctly for each resumed bin.
 
 ### Parsing options (direct script invocation)
 
@@ -127,7 +153,7 @@ Full list of `parse_lhe.py` CLI flags:
 | Flag | Default | Description |
 |---|---|---|
 | `--process ZZ\|WW` | required | Diboson process |
-| `--run-start N` | 1 | First run index to include (inclusive) |
+| `--run-start N` | 2 | First run index to include (inclusive); default is 2 since the first run in the directory is usually the initial startup run, which is not a part of the analysis, since it has no phase-space cuts applied. |
 | `--run-end N` | all | Last run index to include (inclusive) |
 | `--append` | off | Concatenate onto existing `.npy` files instead of overwriting; only valid with `--whole-phase-space` |
 | `--whole-phase-space` | off | Write all events to a single flat directory instead of per-region subdirectories; use for validation runs |
@@ -155,9 +181,10 @@ python src/diboson/io/parse_lhe.py --process ZZ --run-start 11 --append
 source .venv/bin/activate
 export PYTHONPATH=src
 
-python src/diboson/event_gen/automate.py --process ZZ                  # event generation
-python src/diboson/event_gen/automate.py --process ZZ --nevents 50000  # with event count
-python src/diboson/event_gen/automate.py --process ZZ --whole-phase-space  # single uncut run
+python src/diboson/event_gen/automate.py --process ZZ                          # event generation
+python src/diboson/event_gen/automate.py --process ZZ --nevents 50000          # with event count
+python src/diboson/event_gen/automate.py --process ZZ --whole-phase-space      # single uncut run
+python src/diboson/event_gen/automate.py --process ZZ --start-region 4 2       # resume from bin (4,2)
 
 python src/diboson/io/parse_lhe.py --process ZZ           # LHE parsing (binned)
 python src/diboson/io/parse_lhe.py --process ZZ --whole-phase-space --output-dir outputs/data/raw/ZZ/tests
@@ -199,17 +226,17 @@ python src/diboson/analysis/validate.py
 
 The script (`src/diboson/analysis/validate.py`) performs two checks for the ZZ system:
 
-1. **Angular distributions** — plots normalised histograms of cos θ₁, cos θ₃, φ₁, φ₃ to `outputs/plots/tests/`. The cos θ distributions should be roughly flat (small anisotropy); the φ distributions should be uniform.
+1. **Angular distributions** — plots normalised histograms of cos θ₁, cos θ₃, φ₁, φ₃ to `outputs/plots/tests/`.
 
-2. **Coefficient comparison** — computes the whole-phase-space angular coefficients (A₁₁₀, A₁₂₀, A₃₁₀, A₃₂₀, A₁₂₋₂, A₃₂₋₂, g₁₀₁₀, g₂₀₂₀) from spherical harmonic projections and prints them alongside the literature values from the ATLAS analysis. Typical agreement is at the per-cent level.
+2. **Coefficient comparison** — computes the whole-phase-space angular coefficients (A₁₁₀, A₁₂₀, A₃₁₀, A₃₂₀, A₁₂₋₂, A₃₂₋₂, g₁₀₁₀, g₂₀₂₀) from spherical harmonic projections and prints them alongside the expected values obtained during the work conducted for this Master's project, as shown in the report pdf file. Typical agreement is within one standard deviation.
 
-If the coefficients deviate significantly from the literature values, check the MadGraph run card settings (centre-of-mass energy, phase space cuts) and the kinematic conventions in `src/diboson/physics/kinematics.py`.
+If the coefficients deviate significantly from the literature values, check the MadGraph settings in the run card and param card.
 
 ---
 
 ## Code Structure
 
-All shared logic lives in `src/diboson/`. The `ZZ/` and `WW/` top-level directories are legacy and are not part of the current pipeline.
+All shared logic lives in `src/diboson/`.
 
 ```
 src/diboson/
@@ -251,21 +278,23 @@ Defines all operator bases and constructs the 9×9 bipartite qutrit density matr
 - `calculate_density_matrix_AC(A, C)` — builds ρ from spherical harmonic projections (ITO parameterisation, ZZ)
 - `calculate_density_matrix_fgh(f, g, h)` — builds ρ from Gell-Mann coefficients (WW)
 - `project_to_psd(rho, const)` — clips negative eigenvalues via Higham-style projection, then renormalises
-- `unphysicality_score(rho)` — sum of absolute negative eigenvalues normalised by largest eigenvalue
+- `unphysicality_score(rho)` — sum of absolute negative eigenvalues
 
 #### `coefficients.py`
 Extracts density matrix coefficients from lepton angular distributions.
 
 - `calculate_coefficients_AC` / `calculate_variance_AC` — spherical harmonic projections for ZZ (ITO)
 - `calculate_coefficients_fgh` / `calculate_variance_fgh` — Gell-Mann projector functions for WW
-- Both include variance propagation via the full per-event covariance matrix
+- Both include variance propagation for the bell operator via the full per-event covariance matrix
 
 #### `bell_optimiser.py`
 Maximises the CGLMP Bell inequality expectation value over all local unitary rotations U, V ∈ U(3).
 
 **Tensor factorisation.** The 9×9 density matrix ρ and Bell operator O'_B are each reshaped to rank-4 tensors of shape `(3, 3, 3, 3)` before any computation. A composite 9-dimensional index I encodes two qutrit states as `I = 3a + b`, so the reshape decomposes each row/column index into individual single-particle indices `(a, b)`. The expectation value then reduces to a pure index contraction over eight 3-valued indices:
 
-$$\mathcal{I}_3 = \sum_{a,b,c,d,\,i,j,k,l}\, \rho_{ab,cd}\; U^*_{ic}\; V^*_{jd}\; [\mathcal{O}'_B]_{ij,kl}\; U_{ka}\; V_{lb}$$
+$$
+\mathcal{I}_3 = \sum_{a,b,c,d,\,i,j,k,l}\, \rho_{ab,cd}\; U^*_{ic}\; V^*_{jd}\; [\mathcal{O}'_B]_{ij,kl}\; U_{ka}\; V_{lb}
+$$
 
 This avoids constructing the full 9×9 Kronecker product U⊗V at any point. The optimal contraction order is derived once per call via `numpy.einsum_path` and reused on every function evaluation.
 
@@ -316,7 +345,7 @@ Reads MadGraph5 LHE event files, applies Lorentz boosts to the diboson CM frame,
 Unified MadGraph5 driver. Generates per-bin LHE event files for ZZ or WW over the full (M_VV, cosΘ) phase-space grid, or a single uncut run when `--whole-phase-space` is passed.
 
 ```bash
-python src/diboson/event_gen/automate.py --process ZZ [--nevents N] [--whole-phase-space]
+python src/diboson/event_gen/automate.py --process ZZ [--nevents N] [--whole-phase-space] [--start-region COS_IDX MASS_IDX]
 ```
 
 ---
@@ -360,7 +389,32 @@ Or edit the default directly in `src/diboson/config.py`:
 MG5_INSTALL_DIR = Path("/path/to/MG5_aMC")
 ```
 
-The event-generation script creates the process directories (`pp_ZZ`, `pp_WW`) inside `MG5_INSTALL_DIR` on first run. No manual MadGraph setup is required.
+### 5. Process and card setup
+
+Before the automated pipeline can run, the process must be defined inside the MadGraph5 interactive shell and the physics and run cards must be configured. Launch the shell and enter the commands below for ZZ:
+
+```bash
+define p = g u c d s u~ c~ d~ s~ b b~
+define j = g u c d s u~ c~ d~ s~ b b~
+generate p p > e+ e- mu+ mu-
+output pp_ZZ
+launch
+```
+It is important to define p and j this way so that we use the 5-flavour scheme (treat all quarks except for the top quark as massless).
+The equivalent set of commands for WW would be the same, just switching out two of the charged leptons for neutrinos of the corresponding flavour.
+After the process directory has been generated, copy the example cards from this repository into the MadGraph5 process directory to match the settings used in this analysis:
+
+```
+setup/
+├── ZZ/
+│   ├── run_card.dat    # run settings (collider energy, cuts, PDF, scale choices)
+│   └── param_card.dat  # SM parameter values
+└── WW/
+    ├── run_card.dat
+    └── param_card.dat
+```
+
+Copy the relevant card(s) into the `Cards/` subdirectory of the generated process directory (e.g. `$MG5_INSTALL_DIR/pp_ZZ/Cards/`), overwriting the defaults. The automated pipeline then reads these cards on every run.
 
 ---
 
@@ -388,7 +442,7 @@ Coefficients are extracted as expectation values of spherical harmonics (ITO) or
 
 $$\mathcal{C}^2_{LB} = 2\max\!\left(0,\,\mathrm{Tr}\{\rho^2\} - \mathrm{Tr}\{\rho_A^2\},\,\mathrm{Tr}\{\rho^2\} - \mathrm{Tr}\{\rho_B^2\}\right)$$
 
-A non-zero value certifies entanglement.
+A non-zero value certifies entanglement. In this study we have plotted the square root of the quantity above, hence the axis label $\mathcal{C}_{LB}$.
 
 **CGLMP Bell inequality** — generalises the CHSH inequality to qutrit (spin-1) systems:
 
@@ -406,6 +460,6 @@ Observables are mapped across the diboson kinematic plane (M_VV, cosΘ):
 
 - cosΘ: 0.0–1.0 in 10 bins of width 0.1
 - M_ZZ: 200–1000 GeV in 16 bins of width 50 GeV
-- M_WW: 200–1200 GeV in 20 bins of width 50 GeV
+- M_WW: 200–1000 GeV in 16 bins of width 50 GeV
 
 Reconstructed density matrices are projected to the nearest positive semi-definite state via Higham projection when negative eigenvalues arise. Uncertainties on Bell operator values are propagated via the full covariance matrix of density matrix coefficients.

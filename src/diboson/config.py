@@ -49,7 +49,7 @@ WW_ETA = 1.0
 # Phase-space binning — identical bin widths for both processes, different mass ranges.
 N_COS_BINS = 10          # cosΘ: 0.0–1.0 in steps of 0.1
 ZZ_N_MASS_BINS = 16     # M_ZZ: 200–1000 GeV in steps of 50 GeV
-WW_N_MASS_BINS = 20     # M_WW: 200–1200 GeV in steps of 50 GeV
+WW_N_MASS_BINS = 16     # M_WW: 200–1000 GeV in steps of 50 GeV
 COS_BIN_MIN = 0.0
 COS_BIN_WIDTH = 0.1
 MASS_BIN_MIN = 200.0    # GeV

@@ -96,7 +96,7 @@ _PROCESS_CONFIGS = {
 }
 
 
-def run(process: str, raw: bool, plot_only: bool = False) -> None:
+def run(process: str, raw: bool, plot_only: bool = False, start_region=None) -> None:
     cfg = _PROCESS_CONFIGS[process]
     spec = cfg["spec"]
     raw_dir = cfg["raw_dir"]
@@ -121,7 +121,11 @@ def run(process: str, raw: bool, plot_only: bool = False) -> None:
     optimal_params_grid = np.load(params_path) if params_path.exists() else np.zeros((12, *shape))
 
     if not plot_only:
+        start = tuple(start_region) if start_region is not None else (0, 0)
         for key in regions:
+            if key < start:
+                print(f"Skipping region {key} (before start {start})")
+                continue
             time_start = time.time()
             result = _process_region(
                 key, spec, raw_dir, regions,
@@ -161,8 +165,13 @@ def main() -> None:
                         help="Skip PSD projection of the density matrix.")
     parser.add_argument("--plot-only", action="store_true",
                         help="Skip analysis and replot from already-saved grids.")
+    parser.add_argument("--start-region", nargs=2, type=int, metavar=("COS_IDX", "MASS_IDX"),
+                        default=None,
+                        help="Bin indices (cos_idx, mass_idx) at which to start analysis, "
+                             "skipping all earlier bins. "
+                             "Example: --start-region 4 2 resumes from [(0.4,0.5),(300,350)].")
     args = parser.parse_args()
-    run(args.process, args.raw, args.plot_only)
+    run(args.process, args.raw, args.plot_only, args.start_region)
 
 
 if __name__ == "__main__":

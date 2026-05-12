@@ -16,9 +16,9 @@ TESTS_PLOTS_DIR = PROJECT_DIR / "outputs" / "plots" / "tests"
 TESTS_PLOTS_DIR.mkdir(parents=True, exist_ok=True)
 
 validate_dict = {
-    'a_110': 0.00013,
+    'a_110': 0.000,
     'a_120': 0.0299,
-    'a_310': 0.00032,
+    'a_310': 0.000,
     'a_320': 0.0305,
     'a_12m2': -0.0167,
     'a_32m2': -0.0171,
@@ -83,13 +83,21 @@ def calc_coefficients(theta_1, theta_3, phi_1, phi_3):
         are multiplied by sqrt(2) to match the standard definitions.
     """
     a_110 = np.mean(sph_harm_y(1, 0, theta_1, phi_1))
+    a_110_std = np.std(sph_harm_y(1, 0, theta_1, phi_1)) / np.sqrt(len(theta_1))
     a_120 = np.mean(sph_harm_y(2, 0, theta_1, phi_1))
+    a_120_std = np.std(sph_harm_y(2, 0, theta_1, phi_1)) / np.sqrt(len(theta_1))
     a_310 = np.mean(sph_harm_y(1, 0, theta_3, phi_3))
+    a_310_std = np.std(sph_harm_y(1, 0, theta_3, phi_3)) / np.sqrt(len(theta_3))
     a_320 = np.mean(sph_harm_y(2, 0, theta_3, phi_3))
+    a_320_std = np.std(sph_harm_y(2, 0, theta_3, phi_3)) / np.sqrt(len(theta_3))
     a_12m2 = np.mean(sph_harm_y(2, -2, theta_1, phi_1)) * np.sqrt(2)
+    a_12m2_std = np.std(sph_harm_y(2, -2, theta_1, phi_1) * np.sqrt(2)) / np.sqrt(len(theta_1))
     a_32m2 = np.mean(sph_harm_y(2, -2, theta_3, phi_3)) * np.sqrt(2)
+    a_32m2_std = np.std(sph_harm_y(2, -2, theta_3, phi_3) * np.sqrt(2)) / np.sqrt(len(theta_3))
     g_1010 = np.mean(sph_harm_y(1, 0, theta_1, phi_1) * sph_harm_y(1, 0, theta_3, phi_3))
+    g_1010_std = np.std(sph_harm_y(1, 0, theta_1, phi_1) * sph_harm_y(1, 0, theta_3, phi_3)) / np.sqrt(len(theta_1))
     g_2020 = np.mean(sph_harm_y(2, 0, theta_1, phi_1) * sph_harm_y(2, 0, theta_3, phi_3))
+    g_2020_std = np.std(sph_harm_y(2, 0, theta_1, phi_1) * sph_harm_y(2, 0, theta_3, phi_3)) / np.sqrt(len(theta_1))
     return {
         'a_110': a_110,
         'a_120': a_120,
@@ -99,6 +107,14 @@ def calc_coefficients(theta_1, theta_3, phi_1, phi_3):
         'a_32m2': a_32m2,
         'g_1010': g_1010,
         'g_2020': g_2020,
+        'a_110_std': a_110_std,
+        'a_120_std': a_120_std,
+        'a_310_std': a_310_std,
+        'a_320_std': a_320_std,
+        'a_12m2_std': a_12m2_std,
+        'a_32m2_std': a_32m2_std,
+        'g_1010_std': g_1010_std,
+        'g_2020_std': g_2020_std,
     }
 
 
@@ -119,5 +135,5 @@ if __name__ == "__main__":
     # Compare calculated coefficients to literature values
     calculated_coeffs = calc_coefficients(theta_1, theta_3, phi_1, phi_3)
     print("Calculated coefficients:")
-    for key, value in calculated_coeffs.items():
-        print(f"  {key}: {value:.5f} (literature: {validate_dict[key]:.5f})")
+    for key, _ in validate_dict.items():
+        print(f"  {key}: {calculated_coeffs[key].real:.5f} +- {calculated_coeffs[f'{key}_std']:.5f} (target: {validate_dict[key]:.5f})")

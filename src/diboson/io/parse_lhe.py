@@ -369,8 +369,8 @@ def main() -> None:
              "Defaults to the raw data directory from config.py.",
     )
     parser.add_argument(
-        "--run-start", type=int, default=1,
-        help="First run index to process (inclusive). Default: 1.",
+        "--run-start", type=int, default=2,
+        help="First run index to process (inclusive). Default: 2.",
     )
     parser.add_argument(
         "--run-end", type=int, default=None,
