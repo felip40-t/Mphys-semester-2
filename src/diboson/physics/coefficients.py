@@ -2,11 +2,10 @@ import numpy as np
 from scipy.special import sph_harm_y
 
 from diboson.physics.density_matrix import T1_operators, T2_operators, lambda_operators
-from diboson.config import ZZ_ETA as _ZZ_ETA, ZZ_G_L as _g_L, ZZ_G_R as _g_R
+from diboson.config import ZZ_ETA as _ZZ_ETA
 from diboson.physics.projectors import (
     plus_minus, projector_1, projector_2, projector_3, projector_4,
     projector_5, projector_6, projector_7, projector_8, projector_vector,
-    read_masked_data,
 )
 
 
@@ -17,17 +16,6 @@ from diboson.physics.projectors import (
 l_values = [1, 2]
 m_values = {1: [-1, 0, 1], 2: [-2, -1, 0, 1, 2]}
 
-a_matrix = (1 / (_g_R**2 - _g_L**2)) * np.array([
-    [_g_R**2, 0, 0, 0, 0, _g_L**2, 0, 0],
-    [0, _g_R**2, 0, 0, 0, 0, _g_L**2, 0],
-    [0, 0, _g_R**2 - 0.5 * _g_L**2, 0, 0, 0, 0, (np.sqrt(3) / 2) * _g_L**2],
-    [0, 0, 0, _g_R**2 - _g_L**2, 0, 0, 0, 0],
-    [0, 0, 0, 0, _g_R**2 - _g_L**2, 0, 0, 0],
-    [_g_L**2, 0, 0, 0, 0, _g_R**2, 0, 0],
-    [0, _g_L**2, 0, 0, 0, 0, _g_R**2, 0],
-    [0, 0, (np.sqrt(3) / 2) * _g_L**2, 0, 0, 0, 0, 0.5 * _g_L**2 - _g_R**2],
-])
-
 
 # ---------------------------------------------------------------------------
 # ZZ: AC coefficients
@@ -36,7 +24,6 @@ a_matrix = (1 / (_g_R**2 - _g_L**2)) * np.array([
 def calculate_coefficients_AC(theta_paths, phi_paths):
     """
     Calculate the A and C coefficients and return them as dictionaries.
-    If a mask is provided, it will be applied to the data.
     Important to note that the angular data is stored in .npy files.
     """
 
@@ -72,10 +59,23 @@ def calculate_coefficients_AC(theta_paths, phi_paths):
 
                 C_coefficients[(l1, m1, l3, m3)] = coeff
 
+    for l in l_values:
+        for m in m_values[l]:
+            avg = (A_coefficients[1][(l, m)] + A_coefficients[3][(l, m)]) / 2
+            A_coefficients[1][(l, m)] = avg
+            A_coefficients[3][(l, m)] = avg
+
+    for l1, l3 in [(1, 1), (2, 2), (1, 2), (2, 1)]:
+        for m1 in m_values[l1]:
+            for m3 in m_values[l3]:
+                avg = (C_coefficients[(l1, m1, l3, m3)] + C_coefficients[(l3, m3, l1, m1)]) / 2
+                C_coefficients[(l1, m1, l3, m3)] = avg
+                C_coefficients[(l3, m3, l1, m1)] = avg
+
     return A_coefficients, C_coefficients
 
 
-def _find_nonzero_trace_terms_AC(O, threshold=1e-5):
+def _find_nonzero_trace_terms_AC(O, threshold=1e-8):
     non_zero_A1 = []
     non_zero_A3 = []
     non_zero_C = []

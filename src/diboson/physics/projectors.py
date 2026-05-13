@@ -62,8 +62,3 @@ def projector_vector(theta, phi, dataset):
         projector_8(theta, phi, dataset)
     ])
     return vector
-
-
-def read_masked_data(cos_psi_data, inv_mass, psi_range, mass_range):
-    """Apply a mask based on psi and diboson invariant mass."""
-    return (cos_psi_data > psi_range[0]) & (cos_psi_data < psi_range[1]) & (inv_mass > mass_range[0]) & (inv_mass < mass_range[1])

@@ -1,4 +1,8 @@
+import logging
 import numpy as np
+
+_log = logging.getLogger(__name__)
+
 
 def purity(density_matrix):
     """
@@ -6,39 +10,34 @@ def purity(density_matrix):
     """
     return np.trace(density_matrix @ density_matrix)
 
+
 def partial_trace(density_matrix, subsystem, dim):
     """
     Calculate the partial trace of a density matrix over a subsystem.
+
+    rho is indexed as rho[a*dim+b, c*dim+d] where (a,c) belong to subsystem 1
+    and (b,d) to subsystem 2.  Reshape to rho4[a,b,c,d] and contract accordingly.
     """
-    rho_sub = np.zeros((dim, dim), dtype=np.complex128)
+    rho4 = density_matrix.reshape(dim, dim, dim, dim)
     if subsystem == 1:
-        for i in range(dim):
-            for j in range(dim):
-                rho_sub[i, j] = sum(density_matrix[k * dim + i, k * dim + j] for k in range(dim))
-        return rho_sub
+        return np.einsum('kikj->ij', rho4)
     elif subsystem == 2:
-        for i in range(dim):
-            for j in range(dim):
-                rho_sub[i, j] = sum(density_matrix[i * dim + k, j * dim + k] for k in range(dim))
-        return rho_sub
+        return np.einsum('ikjk->ij', rho4)
     else:
         raise ValueError("subsystem must be 1 or 2")
 
-def check_density_matrix(rho):
-    # Check if Hermitian: rho == rho^dagger
-    is_hermitian = np.allclose(rho, np.conjugate(rho.T))
-    print("Is Hermitian:", is_hermitian)
-    # Check if normalized: Tr(rho) == 1
-    trace = np.trace(rho)
-    print("Trace:", trace)
-    is_normalized = np.isclose(trace, 1)
-    print("Is normalized (Trace = 1):", is_normalized)
-    # Check if positive semi-definite: all eigenvalues >= 0
-    eigenvalues = np.linalg.eigvalsh(rho)
-    is_positive_semi_definite = np.all(eigenvalues >= -1e-10)  # Allow small numerical tolerance
-    print("Eigenvalues:", eigenvalues)
-    print("Is positive semi-definite:", is_positive_semi_definite)
 
+def check_density_matrix(rho):
+    is_hermitian = np.allclose(rho, np.conjugate(rho.T))
+    trace = np.trace(rho)
+    is_normalized = np.isclose(trace, 1)
+    eigenvalues = np.linalg.eigvalsh(rho)
+    is_positive_semi_definite = np.all(eigenvalues >= -1e-10)
+    _log.debug("Is Hermitian: %s", is_hermitian)
+    _log.debug("Trace: %s", trace)
+    _log.debug("Is normalized (Trace = 1): %s", is_normalized)
+    _log.debug("Eigenvalues: %s", eigenvalues)
+    _log.debug("Is positive semi-definite: %s", is_positive_semi_definite)
     return is_hermitian and is_positive_semi_definite and is_normalized
 
 def concurrence_lower(density_matrix):
@@ -57,22 +56,4 @@ def concurrence_lower(density_matrix):
         return np.sqrt(conc_lb)
 
 
-def concurrence_upper(density_matrix):
-    """
-    Calculate the upper bound of the concurrence of a bipartite qutrit state.
-    """
-    rho_A = partial_trace(density_matrix, 1, 3)
-    rho_B = partial_trace(density_matrix, 2, 3)
-    purity_A = np.real(purity(rho_A))
-    purity_B = np.real(purity(rho_B))
-    return 2 * min(1 - purity_A, 1 - purity_B)
 
-
-def concurrence_MB(f_coeffs, g_coeffs, h_coeffs):
-    """
-    Calculate the c_mb^2 concurrence of a bipartite qutrit state.
-    """
-    f_sqrd = np.sum(f_coeffs**2)
-    g_sqrd = np.sum(g_coeffs**2)
-    h_sqrd = np.sum(h_coeffs**2)
-    return - (4 / 9) - (2 / 3) * (f_sqrd + g_sqrd) + 8 * h_sqrd

@@ -3,8 +3,10 @@
 Usage:
     python src/diboson/main.py --process ZZ
     python src/diboson/main.py --process WW
-    python src/diboson/main.py --process ZZ --raw        # skip PSD projection
-    python src/diboson/main.py --process ZZ --plot-only  # replot from saved grids
+    python src/diboson/main.py --process ZZ --projection raw     # skip PSD projection
+    python src/diboson/main.py --process ZZ --projection hard    # hard cutoff (default)
+    python src/diboson/main.py --process ZZ --projection smooth  # gradual shift
+    python src/diboson/main.py --process ZZ --plot-only          # replot from saved grids
 """
 
 import argparse
@@ -96,13 +98,13 @@ _PROCESS_CONFIGS = {
 }
 
 
-def run(process: str, raw: bool, plot_only: bool = False, start_region=None) -> None:
+def run(process: str, projection: str = "hard", plot_only: bool = False, start_region=None) -> None:
     cfg = _PROCESS_CONFIGS[process]
     spec = cfg["spec"]
     raw_dir = cfg["raw_dir"]
     processed_dir = cfg["processed_dir"]
     plots_dir = cfg["plots_dir"]
-    label = "raw" if raw else "projected"
+    label = projection
     grid_name = f"{process}_{cfg['coeff_suffix']}_{label}"
 
     regions = spec.build_regions()
@@ -129,7 +131,7 @@ def run(process: str, raw: bool, plot_only: bool = False, start_region=None) -> 
             time_start = time.time()
             result = _process_region(
                 key, spec, raw_dir, regions,
-                calc_bell=True, calc_concurrence=True, raw=raw,
+                calc_bell=True, calc_concurrence=True, projection=projection,
             )
             time_end = time.time()
             print(f"Processed region {key} in {time_end - time_start:.2f} seconds.")
@@ -154,15 +156,16 @@ def run(process: str, raw: bool, plot_only: bool = False, start_region=None) -> 
 
     plot_contour_heatmap(plots_dir, spec, bell_grid, label)
     plot_contour_heatmap(plots_dir, spec, concurrence_grid, label, concurrence=True)
-    generate_unphysicality_heatmap(spec, None, plots_dir, None, data=unphysicality_grid)
+    generate_unphysicality_heatmap(spec, plots_dir, data=unphysicality_grid)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Diboson entanglement analysis.")
     parser.add_argument("--process", choices=["ZZ", "WW"], required=True,
                         help="Which diboson process to analyse.")
-    parser.add_argument("--raw", action="store_true",
-                        help="Skip PSD projection of the density matrix.")
+    parser.add_argument("--projection", choices=["raw", "hard", "smooth"], default="hard",
+                        help="PSD projection mode: raw (none), hard (clip negatives to 0), "
+                             "smooth (gradual shift). Default: hard.")
     parser.add_argument("--plot-only", action="store_true",
                         help="Skip analysis and replot from already-saved grids.")
     parser.add_argument("--start-region", nargs=2, type=int, metavar=("COS_IDX", "MASS_IDX"),
@@ -171,7 +174,7 @@ def main() -> None:
                              "skipping all earlier bins. "
                              "Example: --start-region 4 2 resumes from [(0.4,0.5),(300,350)].")
     args = parser.parse_args()
-    run(args.process, args.raw, args.plot_only, args.start_region)
+    run(args.process, args.projection, args.plot_only, args.start_region)
 
 
 if __name__ == "__main__":

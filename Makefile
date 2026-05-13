@@ -22,13 +22,15 @@ RUN_START     :=
 #   make parse-zz whole-phase-space OUTPUT_DIR=outputs/data/raw/ZZ/tests
 #   make parse-zz RUN_START=5
 #   make analyse-zz raw
+#   make analyse-zz hard
+#   make analyse-zz smooth
 #   make analyse-zz plot-only
 #   make analyse-zz raw plot-only
 #   make analyse-zz START_REGION="4 2"
 
 _WPS       := $(if $(filter whole-phase-space,$(MAKECMDGOALS)),--whole-phase-space)
 _APPEND    := $(if $(filter append,$(MAKECMDGOALS)),--append)
-_RAW       := $(if $(filter raw,$(MAKECMDGOALS)),--raw)
+_PROJECTION_FLAG := $(if $(filter raw,$(MAKECMDGOALS)),--projection raw,$(if $(filter smooth,$(MAKECMDGOALS)),--projection smooth,$(if $(filter hard,$(MAKECMDGOALS)),--projection hard,)))
 _PLOT_ONLY := $(if $(filter plot-only,$(MAKECMDGOALS)),--plot-only)
 
 _NEVENTS_FLAG       := $(if $(NEVENTS),--nevents $(NEVENTS))
@@ -38,15 +40,25 @@ _RUN_START_FLAG     := $(if $(RUN_START),--run-start $(RUN_START))
 
 _EVENT_FLAGS   := $(_NEVENTS_FLAG) $(_WPS) $(_START_REGION_FLAG)
 _PARSE_FLAGS   := $(_WPS) $(_APPEND) $(_OUTPUT_DIR_FLAG) $(_RUN_START_FLAG)
-_ANALYSE_FLAGS := $(_RAW) $(_PLOT_ONLY) $(_START_REGION_FLAG)
+_ANALYSE_FLAGS := $(_PROJECTION_FLAG) $(_PLOT_ONLY) $(_START_REGION_FLAG)
 
 .PHONY: events events-zz events-ww \
         parse parse-zz parse-ww \
         analyse analyse-zz analyse-ww \
-        whole-phase-space append raw plot-only
+        whole-phase-space append raw hard smooth plot-only \
+        clean-plots clean-plots-zz clean-plots-ww
 
 # Modifier no-ops — exist only to be detected via MAKECMDGOALS
-whole-phase-space append raw plot-only: ;
+whole-phase-space append raw hard smooth plot-only: ;
+
+# ── Cleanup ───────────────────────────────────────────────────────────────────
+clean-plots: clean-plots-zz clean-plots-ww
+
+clean-plots-zz:
+	rm -rf outputs/plots/ZZ/
+
+clean-plots-ww:
+	rm -rf outputs/plots/WW/
 
 # ── Event generation ──────────────────────────────────────────────────────────
 events: events-zz events-ww

@@ -54,6 +54,7 @@ def calculate_density_matrix_AC(A_coefficients, C_coefficients):
         density_matrix += C_value * np.kron(T1_op, T2_op)
 
     density_matrix *= 1/9
+    density_matrix = (density_matrix + density_matrix.conj().T) / 2 # Symmetrize to ensure Hermiticity
 
     return density_matrix
 
@@ -71,25 +72,31 @@ def calculate_density_matrix_fgh(f_coefficients, g_coefficients, h_coefficients)
     return density_matrix
 
 def gradual_shift_func(x, a):
+    """ Gradually shift negative eigenvalues towards zero instead of hard clipping. """
     return (1 - a) * x * np.exp(x / a)
 
 
-def project_to_psd(rho, const, normalize_trace=True):
+def project_to_psd(rho: np.ndarray, const: float, normalize_trace=True, cutoff=True):
     """
     Project a Hermitian matrix rho to the nearest positive semi-definite matrix.
 
     Parameters:
         rho (np.ndarray): Hermitian matrix to be projected (e.g., 9x9).
         normalize_trace (bool): Whether to renormalize to trace 1.
+        cutoff (bool): Whether to use hard cutoff for negative eigenvalues.
+        const (float): Constant for the gradual shift function.
 
     Returns:
         np.ndarray: PSD matrix closest to rho.
     """
-
+    if const == 0.0:
+        return rho  # No projection needed
     # Eigen-decomposition
     eigenvalues, eigenvectors = np.linalg.eigh(rho)
-
-    eigenvalues_clipped = np.where(eigenvalues < 0, gradual_shift_func(eigenvalues, const), eigenvalues)
+    if cutoff:
+        eigenvalues_clipped = np.where(eigenvalues < 0, 0, eigenvalues)
+    else:
+        eigenvalues_clipped = np.where(eigenvalues < 0, gradual_shift_func(eigenvalues, const), eigenvalues)
 
     # Reconstruct the matrix
     rho_psd = (eigenvectors @ np.diag(eigenvalues_clipped) @ eigenvectors.conj().T)
@@ -111,16 +118,7 @@ def unphysicality_score(density_matrix):
         density_matrix (np.ndarray): Density matrix to evaluate.
 
     Returns:
-        float: Unphysicality score (trace of the difference between the density matrix and its PSD projection).
+        float: Sum of absolute values of negative eigenvalues.
     """
-    # Calculate unphysicality score
-    score = 0
-
-    # Calculate eigenvalues and eigenvectors
-    eigenvalues, eigenvectors = np.linalg.eigh(density_matrix)
-    for i in range(len(eigenvalues)):
-        # Calculate the unphysicality score
-        if eigenvalues[i] < 0:
-            score += abs(eigenvalues[i])
-
-    return score
+    eigenvalues = np.linalg.eigvalsh(density_matrix)
+    return float(np.sum(np.maximum(-eigenvalues, 0.0)))

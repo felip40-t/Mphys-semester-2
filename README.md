@@ -83,7 +83,9 @@ The Makefile accepts **modifier words** appended to the target name and **variab
 |---|---|---|
 | `whole-phase-space` | `events-*`, `parse-*` | Generates or parses a single uncut whole-phase-space run instead of per-bin runs |
 | `append` | `parse-*` | Concatenates onto existing `.npy` files instead of overwriting; only valid with `whole-phase-space` |
-| `raw` | `analyse-*` | Skips PSD projection of the density matrix |
+| `raw` | `analyse-*` | No PSD projection; density matrix used as-is |
+| `hard` | `analyse-*` | Hard cutoff: negative eigenvalues clipped to 0 (default if no projection modifier is given) |
+| `smooth` | `analyse-*` | Smooth projection: negative eigenvalues shifted gradually towards 0 via a gradual shift function |
 | `plot-only` | `analyse-*` | Skips the analysis computation and replots from already-saved grids |
 
 #### Variable overrides
@@ -111,6 +113,12 @@ make parse-zz whole-phase-space append OUTPUT_DIR=outputs/data/raw/ZZ/tests
 
 # Analyse without PSD projection
 make analyse-zz raw
+
+# Analyse with hard cutoff projection (default)
+make analyse-zz hard
+
+# Analyse with smooth (gradual shift) projection
+make analyse-zz smooth
 
 # Replot from saved grids without rerunning the analysis
 make analyse-zz plot-only
@@ -189,9 +197,11 @@ python src/diboson/event_gen/automate.py --process ZZ --start-region 4 2       #
 python src/diboson/io/parse_lhe.py --process ZZ           # LHE parsing (binned)
 python src/diboson/io/parse_lhe.py --process ZZ --whole-phase-space --output-dir outputs/data/raw/ZZ/tests
 
-python src/diboson/main.py --process ZZ                   # full analysis + plots
-python src/diboson/main.py --process ZZ --raw             # skip PSD projection
-python src/diboson/main.py --process ZZ --plot-only       # replot from saved grids
+python src/diboson/main.py --process ZZ                             # full analysis + plots (hard projection)
+python src/diboson/main.py --process ZZ --projection raw            # no PSD projection
+python src/diboson/main.py --process ZZ --projection hard           # hard cutoff (default)
+python src/diboson/main.py --process ZZ --projection smooth         # gradual shift projection
+python src/diboson/main.py --process ZZ --plot-only                 # replot from saved grids
 ```
 
 ### Output layout

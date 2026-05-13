@@ -1,9 +1,8 @@
 # Virtual environment
 .venv/
 
-# CLAUDE.md
-CLAUDE.md
-plan.md
+# claude
+.claude/*
 
 # Python cache
 __pycache__/
@@ -17,12 +16,8 @@ __pycache__/
 *.npz
 *.csv
 *.json
-outputs/
+outputs/data/
 
-# Plots
-*.png
-*.pdf
-*.svg
 
 # VS Code / Visual Studio
 .vscode/
@@ -34,5 +29,3 @@ outputs/
 # Misc
 *.log
 
-# Archived scripts (kept locally, not tracked)
-old/

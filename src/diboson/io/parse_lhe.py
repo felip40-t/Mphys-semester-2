@@ -198,35 +198,44 @@ def parse_lhe_file(
     n_skipped = 0
     batch_idx = 0
 
-    for event in pylhe.read_lhe_with_attributes(lhe_file_path):
-        # Collect final-state 4-momenta keyed by PDG id
-        momenta: dict[int, list[float]] = {}
-        for particle in event.particles:
-            if particle.status == 1 and particle.id in all_ids:
-                momenta[particle.id] = [
-                    particle.e, particle.px, particle.py, particle.pz
-                ]
+    try:
+        for event in pylhe.read_lhe_with_attributes(lhe_file_path):
+            # Collect final-state 4-momenta keyed by PDG id
+            momenta: dict[int, list[float]] = {}
+            for particle in event.particles:
+                if particle.status == 1 and particle.id in all_ids:
+                    momenta[particle.id] = [
+                        particle.e, particle.px, particle.py, particle.pz
+                    ]
 
-        # Skip incomplete events (should not happen in well-formed LHE files)
-        if not all(pid in momenta for pid in all_ids):
-            n_skipped += 1
-            continue
+            # Skip incomplete events (should not happen in well-formed LHE files)
+            if not all(pid in momenta for pid in all_ids):
+                n_skipped += 1
+                continue
 
-        raw["v1"].append(momenta[v1_id])
-        raw["v2"].append(momenta[v2_id])
-        raw["v3"].append(momenta[v3_id])
-        raw["v4"].append(momenta[v4_id])
-        n_events += 1
+            raw["v1"].append(momenta[v1_id])
+            raw["v2"].append(momenta[v2_id])
+            raw["v3"].append(momenta[v3_id])
+            raw["v4"].append(momenta[v4_id])
+            n_events += 1
 
-        if n_events % batch_size == 0:
+            if n_events % batch_size == 0:
+                batch_idx = _process_and_flush(raw, output_dir, batch_idx)
+                print(f"  {n_events:,} events processed …")
+
+        # Flush any remaining events in the last (partial) batch
+        if raw["v1"]:
             batch_idx = _process_and_flush(raw, output_dir, batch_idx)
-            print(f"  {n_events:,} events processed …")
 
-    # Flush any remaining events in the last (partial) batch
-    if raw["v1"]:
-        batch_idx = _process_and_flush(raw, output_dir, batch_idx)
-
-    _finalize(output_dir, batch_idx, append)
+        _finalize(output_dir, batch_idx, append)
+    except BaseException:
+        # Clean up any partial batch files so interrupted runs leave a clean state.
+        for key in _OUTPUT_KEYS:
+            for i in range(batch_idx):
+                bp = _batch_path(output_dir, key, i)
+                if os.path.exists(bp):
+                    os.remove(bp)
+        raise
 
     if n_skipped:
         print(f"  Warning: {n_skipped} incomplete events skipped.")
@@ -267,7 +276,8 @@ def parse_lhe_runs(
         Root directory where output files are written.
     regions : list or None
         Ordered list of region specs ``[(cos_lo, cos_hi), (mass_lo, mass_hi)]``
-        produced by ``automate._build_regions``.  Must cover at least as many
+        in sorted ``(cos_idx, mass_idx)`` order, matching the generation order
+        from ``ProcessSpec.build_regions()``.  Must cover at least as many
         entries as there are runs to process.
     run_start : int
         First run index to process (inclusive).
@@ -308,6 +318,8 @@ def parse_lhe_runs(
             print(f"Warning: no LHE file found in {run_dir}, skipping.")
             continue
 
+        if len(lhe_files) > 1:
+            print(f"Warning: {len(lhe_files)} LHE files found in {run_dir}, using {os.path.basename(lhe_files[0])}.")
         lhe_path = lhe_files[0]
         print(f"[run {run_num:02d}] {lhe_path}")
 
@@ -395,7 +407,10 @@ def main() -> None:
 
     events_dir = args.events_dir or _DEFAULT_EVENTS_DIRS[args.process]
     output_dir = args.output_dir or _DEFAULT_OUTPUT_DIRS[args.process]
-    regions = None if args.whole_phase_space else _REGIONS[args.process]
+    regions = (
+        None if args.whole_phase_space
+        else [v for _, v in sorted(_REGIONS[args.process].items())]
+    )
 
     print(f"Process  : {args.process}")
     print(f"Events   : {events_dir}")

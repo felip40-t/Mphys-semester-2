@@ -26,8 +26,13 @@ def lorentz_boost(p_in, p_frame):
     m2 = p_frame[:, 0]**2 - np.sum(p_frame[:, 1:]**2, axis=1)
     m = np.sqrt(np.maximum(m2, 0.0))
 
-    e_boosted = (p_in[:, 0]*p_frame[:, 0] - np.einsum('ij,ij->i', p_in[:, 1:], p_frame[:, 1:])) / m
-    proj = (e_boosted + p_in[:, 0]) / (p_frame[:, 0] + m)
+    if np.any(m < 1e-10):
+        import warnings
+        warnings.warn("lorentz_boost: near-zero invariant mass in frame 4-vector; boost result will be unreliable for those events.")
+    m_safe = np.where(m < 1e-10, 1.0, m)
+
+    e_boosted = (p_in[:, 0]*p_frame[:, 0] - np.einsum('ij,ij->i', p_in[:, 1:], p_frame[:, 1:])) / m_safe
+    proj = (e_boosted + p_in[:, 0]) / (p_frame[:, 0] + m_safe)
 
     p_out = np.empty_like(p_in)
     p_out[:, 0] = e_boosted
@@ -122,7 +127,11 @@ def calc_scattering_angle(parent_4_mom):
     cos_psi : (N,) array
     """
     p3 = parent_4_mom[:, 1:]
-    return p3[:, 2] / np.linalg.norm(p3, axis=1)
+    norm = np.linalg.norm(p3, axis=1)
+    if np.any(norm < 1e-10):
+        import warnings
+        warnings.warn("calc_scattering_angle: near-zero 3-momentum; cos_psi will be unreliable for those events.")
+    return p3[:, 2] / np.where(norm < 1e-10, 1.0, norm)
 
 
 def calc_inv_mass(four_vec):

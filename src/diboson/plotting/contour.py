@@ -37,7 +37,7 @@ def plot_contour_heatmap(save_dir, spec, bell_value_grid, label, concurrence=Fal
                                 levels=custom_levels, colors='black', linewidths=0.7)
     plt.clabel(contour_lines, inline=True, fontsize=FONTSIZE_ANNOTATION, fmt="%.2f")
     if concurrence:
-        colorbar = plt.colorbar(contour_filled, label=r'$\mathcal{C}_LB$', orientation='vertical')
+        colorbar = plt.colorbar(contour_filled, label=r'$\mathcal{C}_{LB}$', orientation='vertical')
     else:
         colorbar = plt.colorbar(contour_filled, label=r'$\mathcal{I}_3$', orientation='vertical')
     colorbar.ax.yaxis.label.set_fontsize(FONTSIZE_LABEL)
@@ -89,49 +89,31 @@ def plot_contour_heatmap(save_dir, spec, bell_value_grid, label, concurrence=Fal
     plt.savefig(heatmap_filename)
     plt.close()
 
-def generate_unphysicality_heatmap(spec, raw_dir, save_dir, regions, data=None):
+def generate_unphysicality_heatmap(spec, save_dir, data=None):
     cos_psi_grid, inv_mass_grid = spec.grid_centers()
     x_centers = cos_psi_grid[0, :]
     y_centers = inv_mass_grid[:, 0]
 
-    if data is None:
-        unphysicality_grid = np.zeros((spec.n_cos_bins, spec.n_mass_bins))
-
-        for (i, j), region in regions.items():
-            print(f"Calculating unphysicality for region: {region}...")
-            region_dir = _region_dir(raw_dir, region)
-
-            if os.path.exists(region_dir):
-                theta_paths, phi_paths = _theta_phi_paths(spec, region_dir)
-                density_matrix = spec.get_density_matrix(theta_paths, phi_paths)
-                unphysicality = unphysicality_score(density_matrix)
-                print(f"\nUnphysicality score for region: {region} = {unphysicality:.4g}\n")
-                unphysicality_grid[i, j] = unphysicality
-            else:
-                print(f"Directory {region_dir} not found. Skipping region.")
-
-        np.save(os.path.join(save_dir, f"unphysicality_scores_{spec.name}.npy"), unphysicality_grid)
-    else:
-        unphysicality_grid = data
-
-    unphysicality_grid = unphysicality_grid.T  # (n_cos, n_mass) -> (n_mass, n_cos) for meshgrid alignment
+    unphysicality_grid = data if data is not None else np.zeros((spec.n_cos_bins, spec.n_mass_bins))
+    unphysicality_grid = unphysicality_grid.T  # (n_cos, n_mass) -> (n_mass, n_cos) for imshow alignment
 
     plt.figure(figsize=FIGSIZE_HEATMAP)
-    plt.imshow(unphysicality_grid, origin='lower', 
+    plt.imshow(unphysicality_grid, origin='lower',
                 extent=[spec.cos_min, spec.cos_max, spec.mass_min, spec.mass_max],
                 aspect='auto', cmap='plasma')
     colorbar = plt.colorbar(label='Unphysicality', orientation='vertical')
     colorbar.ax.yaxis.label.set_fontsize(FONTSIZE_LABEL)
     plt.xlabel(r'$\cos{\Theta}$', fontsize=FONTSIZE_LABEL)
     plt.ylabel(rf'$M_{{{spec.name}}} (GeV)$', fontsize=FONTSIZE_LABEL)
-    plt.yticks(y_centers, fontsize=FONTSIZE_TICK)
-    plt.xticks(x_centers, fontsize=FONTSIZE_TICK)
+    plt.yticks(np.arange(spec.mass_min, spec.mass_max + 1, spec.mass_width), fontsize=FONTSIZE_TICK)
+    plt.xticks(np.arange(spec.cos_min, spec.cos_max + 0.001, spec.cos_width), fontsize=FONTSIZE_TICK)
 
     for i, y in enumerate(y_centers):
         for j, x in enumerate(x_centers):
             plt.text(x, y, f"{unphysicality_grid[i, j]:.2f}", color="white",
                      ha="center", va="center", fontsize=FONTSIZE_ANNOTATION)
 
+    plt.tight_layout()
     base = os.path.join(save_dir, f"unphysicality_heatmap_{spec.name}")
     plt.savefig(base + ".pdf")
     plt.savefig(base + ".png")

@@ -93,7 +93,7 @@ def process_region(
     calc_bell=True,
     calc_concurrence=True,
     check_density=False,
-    raw=False,
+    projection="hard",
 ):
     region = regions[region_key]
     print(f"\n\nCalculating for region: {region}...\n")
@@ -104,6 +104,10 @@ def process_region(
 
     theta_paths, phi_paths = _theta_phi_paths(spec, save_dir)
 
+    n_events = len(np.load(theta_paths[1]))
+    if n_events < 5000:
+        print(f"Warning: only {n_events} events in region {region}. Results may be unreliable.")
+
     density_matrix = spec.get_density_matrix(theta_paths, phi_paths)
     if check_density:
         check_density_matrix(density_matrix)
@@ -111,8 +115,12 @@ def process_region(
     unphysicality = unphysicality_score(density_matrix)
     print(f"\nUnphysicality score for region: {region} = {unphysicality:.4g}\n")
 
-    if not raw:
-        density_matrix = project_to_psd(density_matrix, const=unphysicality, normalize_trace=True)
+    if projection == "hard":
+        density_matrix = project_to_psd(density_matrix, const=unphysicality, normalize_trace=True, cutoff=True)
+        if check_density:
+            check_density_matrix(density_matrix)
+    elif projection == "smooth":
+        density_matrix = project_to_psd(density_matrix, const=unphysicality, normalize_trace=True, cutoff=False)
         if check_density:
             check_density_matrix(density_matrix)
 
@@ -126,10 +134,10 @@ def process_region(
         print(f"\nConcurrence bound for region: {region} = {concurrence_val:.4g}\n")
 
     if calc_bell:
-        bell_value, optimal_params = bell_inequality_optimization(density_matrix, O_bell_prime1)
+        seed = region_key[0] * spec.n_mass_bins + region_key[1]
+        bell_value, optimal_params = bell_inequality_optimization(density_matrix, O_bell_prime1, seed=seed)
         optimal_O_bell = optimal_bell_operator(O_bell_prime1, optimal_params)
         print(f"Bell operator value for region: {region} = {bell_value:.4g}\n")
-
         variance = spec.get_variance(theta_paths, phi_paths, optimal_O_bell).real
         print(f"Variance of Bell operator for region: {region} = {variance:.6g}\n")
         uncertainty_bell = np.sqrt(variance)
@@ -168,9 +176,12 @@ def generate_event_count_heatmap(spec, raw_dir, save_dir, regions, num_x_bins=10
             )
             event_count_grid += hist2d
 
+    nonzero = event_count_grid[event_count_grid > 0]
+    vmax = float(np.percentile(nonzero, 99)) if nonzero.size > 0 else 1.0
+
     plt.figure(figsize=FIGSIZE_HEATMAP)
     plt.imshow(event_count_grid, origin='lower', extent=[spec.cos_min, spec.cos_max, spec.mass_min, spec.mass_max],
-               aspect='auto', cmap='inferno', vmin=0, vmax=2500)
+               aspect='auto', cmap='inferno', vmin=0, vmax=vmax)
     colorbar = plt.colorbar(label=r'Event Count', orientation='vertical')
     colorbar.ax.yaxis.label.set_fontsize(FONTSIZE_LABEL)
     plt.xlabel(r'$\cos{\Theta}$', fontsize=FONTSIZE_LABEL)
