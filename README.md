@@ -10,7 +10,7 @@ University of Manchester
 
 ## Overview
 
-This repository contains the analysis framework used to reconstruct spin density matrices of electroweak boson pairs (ZZ and W⁺W⁻) produced in proton–proton collisions at √s = 13 TeV, and to evaluate quantum entanglement observables. Full project report available in this repo (University of Manchester MPhys, 2025).
+This repository contains the analysis framework used to reconstruct spin density matrices of electroweak boson pairs (ZZ and W⁺W⁻) produced in proton–proton collisions at √s = 13 TeV, and to evaluate quantum entanglement observables. Full project report available in this repo (University of Manchester MPhys, 2025). **Note:** The results shown in the outputs/ directory were generated from a different dataset than the one that was used to make the results section of the report attached.
 
 The analysis pipeline:
 
